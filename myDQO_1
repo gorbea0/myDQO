@@ -1,0 +1,1450 @@
+import serial   
+import time
+import calendar
+import datetime
+#from datetime import datetime, date, time, timedelta
+
+#from datetime import date, datetime
+import os
+# import pymysql      
+import sqlite3
+from tkinter import *
+from tkinter import messagebox
+import tkinter.ttk as ttk
+#import tkinter as tk
+from tkinter import simpledialog
+#imports para treeview
+import threading
+import numpy as np
+from matplotlib import pyplot as plt
+#variables generales
+
+hoy=time.strftime("%d/%m/%Y")
+#hoy=time.strftime("%Y/%m/%d")
+root=Tk()
+root.title("Control de la temperatura en ensayos de DQO")
+root.geometry("1000x640")
+root.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+
+
+global flag
+#global factor150
+#factor150=100
+
+#relleno =StringVar   #(root)
+#Label1=Label(root, textvariable=relleno)
+#Label1.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+
+############################################################################################
+
+def arduino():
+  global hora
+  global sTemp
+  lectura = serial.Serial('COM3',9600)
+  lectura.timeout = 1
+  # provocar reseteo manual de la placa para leer desde el principio , necesario en Linux
+  lectura.setDTR(False) 
+  time.sleep(1)
+  lectura.flushInput()
+  lectura.setDTR(True)
+
+  while True:     #sArduino = PuertoSerie.read(PuertoSerie.inWaiting())
+    time.sleep(1)
+    try:
+      sArduino = lectura.readline()
+      sArduino = sArduino.strip()
+      sArduino=str(sArduino)
+      sHumedad, sTemp, sFin = sArduino.split("|", 2) 
+      tiempo = time.time()
+      fecha = time.ctime(tiempo)
+      #print (sTemp) 
+      hora=time.strftime("%H:%M:%S")
+      #print(hora)
+      #Label1.relleno.set=("hola")
+      #tree.insert('', 'end', values=(hora,sTemp))
+      
+    except:
+      sTemp=1000
+      messagebox.askquestion("Error", "Se ha desconectado el Arduino")   
+      break 
+
+def refrescar():
+  global daysToCalibrate
+  global rangosu
+  global rangoin
+  global factCober
+  global intervalomed
+  global duraciondqo
+  global tiempomedidaCN
+  global tempdqo
+  global tempcn
+  global toleranceDQO
+  global toleranceCN
+  global estadoSensor
+  global factor80
+  global factor150
+  global u80
+  global u150
+  global fechaUltimaCalibracion
+  global miId
+
+  #leemos los datos de la base de datos para la aplicacion general
+  conexion=sqlite3.connect("D:\\tempcontrol.db")
+  cursorConfig=conexion.cursor()
+  cursorHistorial=conexion.cursor()
+  cursorCalibracion=conexion.cursor()
+  cursorUltimaCaliFecha=conexion.cursor()
+  cursorEnsayos=conexion.cursor()
+  try:
+    cursorConfig.execute("SELECT * FROM config")
+    cursorHistorial.execute("SELECT estado FROM historial WHERE fecha=(SELECT MAX(fecha) FROM historial)")
+    cursorCalibracion.execute("SELECT * FROM calibracion where fecha=(SELECT MAX(fecha) from  (SELECT * from calibracion  WHERE fecha <='"+str(hoy)+"'))") 
+    cursorUltimaCaliFecha.execute("SELECT MAX(fecha) from calibracion")
+    cursorEnsayos.execute("SELECT Id FROM ensayos WHERE Id=(SELECT MAX(Id) FROM ensayos) order by Id")
+    conexion.commit()
+    preferencias=cursorConfig.fetchall()
+    for b in preferencias:
+       daysToCalibrate=b[0]
+       rangosu=b[1]
+       rangoin=b[2]
+       factCober=b[3]
+       intervalomed=b[4]
+       duraciondqo=b[5]
+       tiempomedidaCN=b[6]
+       tempdqo=b[7]
+       tempcn=b[8]
+       toleranceDQO=b[9]
+       toleranceCN=b[10]
+    
+    listadoHistorial=cursorHistorial.fetchall()
+    for est in listadoHistorial:
+      estadoSensor=est[0]   # antes 0
+    
+    CalibracionActual=cursorCalibracion.fetchall()
+    for factor in CalibracionActual:
+      factor150=factor[5]
+      factor80=factor[4]
+      u80=factor[6]
+      u150=factor[7]
+      #factor150=factor['factor150']
+      #factor80=factor['factor80']
+
+    FechaUlCal=cursorUltimaCaliFecha.fetchall()
+    #fechaUltimaCalibracion=FechaUlCal
+    for x in FechaUlCal:
+      fechaUltimaCalibracion=x[0]
+
+    listadoEnsayos=cursorEnsayos.fetchall()
+    for x in listadoEnsayos:
+      miId=x[0]
+      print("miId "+str(miId))
+
+  except:
+    messagebox.showerror("Error","No se puede leer la base de datos!!")
+  finally:
+    cursorConfig.close()
+    cursorHistorial.close()
+    cursorCalibracion.close()
+    cursorUltimaCaliFecha.close()
+    cursorEnsayos.close()
+    conexion.close()
+####################################################################################################
+  
+
+def certificado():
+  #os.popen('a.pdf')
+  promp=os.system('start SumatraPDF D:FichaSensorDQO.pdf')
+
+####################################################################################################  
+
+refrescar()
+
+####################################################################################################
+
+def muestraEnsayos():
+  refrescar()
+  ventanaEnsayos=Frame(root)
+  ventanaEnsayos.pack()
+  tipoLabel=Label(ventanaEnsayos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion)) #
+  tipoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  estadoLabel=Label(ventanaEnsayos, text="Estado del sensor actualmente "+estadoSensor)
+  estadoLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+
+  f150Label=Label(ventanaEnsayos, text="Factor corrector DQO: "+str(factor150))
+  f150Label.grid(row=2, column=0, sticky="e", padx=10, pady=5)
+  
+
+
+
+
+
+  
+
+  def eliminar():
+    valor ="not"
+    #elimina datos en BBDD de cada ensayo
+    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaEnsayos,  minvalue=1, maxvalue=9999)
+    if answ is not None:
+      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el registro de temperaturas asociado")
+    if valor=="yes" and answ is not None:
+      miconexion=sqlite3.connect("D:\\tempcontrol.db")
+      micursor=miconexion.cursor()
+      try:
+        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answ))
+        micursor.execute("DELETE FROM ensayos WHERE Id="+str(answ))
+        messagebox.showinfo("Atencion","Registro"+str(answ)+"eliminado con exito") 
+        miconexion.commit()
+      except:
+        messagebox.showerror("Atencion","Error") 
+      finally:
+        micursor.close()
+        miconexion.close()
+    else:
+      messagebox.showerror("Atencion","Cancelado")   
+
+  botonera=Frame(root)
+  botonera.pack()
+  botonparar=Button(botonera, text="Eliminar por Id", command=eliminar)
+  botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+
+
+  Right = Frame(root, width=500, height=350, bd=8, relief="raise")
+  Right.pack(side=RIGHT)
+  scrollbary = Scrollbar(Right, orient=VERTICAL)
+  scrollbarx = Scrollbar(Right, orient=HORIZONTAL)
+  tree = ttk.Treeview(Right, columns=("Id", "tipo","fecha", "sensor","cubeta", "lims1","lims2","lims3","lims4","lims5","lims6","lims7","lims8","lims9", "control", "analista", "observaciones"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  scrollbary.config(command=tree.yview)
+  scrollbary.pack(side=RIGHT, fill=Y)
+  scrollbarx.config(command=tree.xview)
+  scrollbarx.pack(side=BOTTOM, fill=X)
+  tree.heading('Id', text="Id", anchor=W)
+  tree.heading('tipo', text="tipo", anchor=W)
+  tree.heading('fecha', text="fecha", anchor=W)
+  tree.heading('sensor', text="sensor", anchor=W)
+  tree.heading('cubeta', text="cubeta", anchor=W)
+  tree.heading('lims1', text="lims1", anchor=W)
+  tree.heading('lims2', text="lims2", anchor=W)
+  tree.heading('lims3', text="lims3", anchor=W)
+  tree.heading('lims4', text="lims4", anchor=W)
+  tree.heading('lims5', text="lims5", anchor=W)
+  tree.heading('lims6', text="lims6", anchor=W)
+  tree.heading('lims7', text="lims7", anchor=W)
+  tree.heading('lims8', text="lims8", anchor=W)
+  tree.heading('lims9', text="lims9", anchor=W)
+  tree.heading('control', text="control", anchor=W)
+  tree.heading('analista', text="analista", anchor=W)
+  tree.heading('observaciones', text="observaciones", anchor=W)
+
+
+  tree.column('#0', stretch=NO, minwidth=4, width=10)
+  tree.column('#1', stretch=NO, minwidth=4, width=10)
+  tree.column('#2', stretch=NO, minwidth=12, width=45)
+  tree.column('#3', stretch=NO, minwidth=5, width=45)
+  tree.column('#4', stretch=NO, minwidth=0, width=150)
+  tree.column('#5', stretch=NO, minwidth=0, width=120)
+  tree.column('#6', stretch=NO, minwidth=0, width=120)
+  tree.column('#7', stretch=NO, minwidth=0, width=200)
+  tree.column('#8', stretch=NO, minwidth=0, width=120)
+  tree.column('#9', stretch=NO, minwidth=0, width=200)
+  tree.column('#10', stretch=NO, minwidth=0, width=50)
+  tree.column('#11', stretch=NO, minwidth=0, width=40)
+  tree.column('#12', stretch=NO, minwidth=0, width=80)
+  tree.column('#13', stretch=NO, minwidth=0, width=45)
+  tree.column('#14', stretch=NO, minwidth=0, width=150)
+  tree.column('#15', stretch=NO, minwidth=0, width=120)
+  tree.column('#16', stretch=NO, minwidth=0, width=120) 
+  tree.pack()
+
+  miconexion=sqlite3.connect("D:\\tempcontrol.db")
+  micursor=miconexion.cursor()
+  micursor.execute("SELECT * from ensayos order by Id")
+  datos=micursor.fetchall()
+  
+  tree.delete(*tree.get_children())
+  
+  for row in datos:
+      print (row)
+      tree.insert('', 'end', values=(row[0],row[1], row[2], row[3], row[4], row[5], row[6],row[7],row[8],row[9],row[10], row[11], row[12], row[13], row[14], row[15],row[16]))
+
+  micursor.close()
+  miconexion.close()
+
+
+
+#######################################################################################3
+def muestraCalibracion():
+  refrescar()
+  ventanaCali=Toplevel(root)
+  ventanaCali.config(cursor="hand2")
+  ventanaCali.geometry("780x400")
+  ventanaCali.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanaCali.title("Registro de calibraciones de sensores de DQO")
+  campos=Frame(ventanaCali)
+  campos.pack()
+  tipoLabel=Label(campos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion)) #
+  tipoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  estadoLabel=Label(campos, text="Estado del sensor actualmente "+estadoSensor)
+  estadoLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+  def eliminarCalibracion():
+    #elimina datos en BBDD de cada ensayo
+    valor="not"
+    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaCali,  minvalue=1, maxvalue=9999)
+    if answ is not None:
+      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+    if valor=="yes" and answ is not None:
+      miconexion=sqlite3.connect("D:\\tempcontrol.db")
+      micursor=miconexion.cursor()
+      try:
+        micursor.execute("DELETE FROM calibracion WHERE Id="+str(answ))
+        messagebox.showinfo("Atencion","Registro"+str(answ)+" eliminado con exito") 
+        miconexion.commit()
+      except:
+        messagebox.showerror("Atencion","Error") 
+      finally:
+        micursor.close()
+        miconexion.close()    
+    else:
+      messagebox.showerror("Atencion","Cancelado")   
+
+  botonera=Frame(ventanaCali)
+  botonera.pack()
+  botonparar=Button(botonera, text="Eliminar por Id", command=eliminarCalibracion)
+  botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+  Right = Frame(ventanaCali, width=600, height=500, bd=8, relief="raise")
+  Right.pack(side=RIGHT)
+  scrollbary = Scrollbar(Right, orient=VERTICAL)
+  scrollbarx = Scrollbar(Right, orient=HORIZONTAL)
+  tree = ttk.Treeview(Right, columns=("Id", "fecha", "sensor", "realizado por", "factor 80", "factor 150","u80","u150","observaciones"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  scrollbary.config(command=tree.yview)
+  scrollbary.pack(side=RIGHT, fill=Y)
+  scrollbarx.config(command=tree.xview)
+  scrollbarx.pack(side=BOTTOM, fill=X)
+  tree.heading('Id', text="Id", anchor=W)
+  tree.heading('fecha', text="fecha", anchor=W)
+  tree.heading('sensor', text="sensor", anchor=W)
+  tree.heading('realizado por', text="realizado por", anchor=W)
+  tree.heading('factor 80', text="factor 80", anchor=W)
+  tree.heading('factor 150', text="factor 150", anchor=W)
+  tree.heading('u80', text="Incert exp 80", anchor=W)
+  tree.heading('u150', text="Incert exp 150", anchor=W)
+  tree.heading('observaciones', text="observaciones", anchor=W)
+  tree.column('#0', stretch=NO, minwidth=0, width=10)
+  tree.column('#1', stretch=NO, minwidth=0, width=40)
+  tree.column('#2', stretch=NO, minwidth=0, width=80)
+  tree.column('#3', stretch=NO, minwidth=0, width=45)
+  tree.column('#4', stretch=NO, minwidth=0, width=150)
+  tree.column('#5', stretch=NO, minwidth=0, width=120)
+  tree.column('#6', stretch=NO, minwidth=0, width=120)
+  tree.column('#7', stretch=NO, minwidth=0, width=200)
+  tree.column('#8', stretch=NO, minwidth=0, width=120)
+  tree.column('#9', stretch=NO, minwidth=0, width=200)
+
+  tree.pack()
+
+  miconexion=sqlite3.connect("D:\\tempcontrol.db")
+  micursor=miconexion.cursor()
+  micursor.execute("SELECT * from calibracion order by Id")
+  datos=micursor.fetchall()
+  
+  tree.delete(*tree.get_children())
+
+  
+  for row in datos:
+      #print (row)
+      tree.insert('', 'end', values=(row[0],row[1], row[2], row[3], row[4], row[5], row[6],row[7],row[8]))
+
+  micursor.close()
+  miconexion.close()
+
+
+####################################################################################################
+
+
+def muestraTemperaturas():
+  refrescar()
+  ventanaTemperaturas=Toplevel(root)
+  ventanaTemperaturas.config(cursor="hand2")
+  ventanaTemperaturas.geometry("800x400")
+  ventanaTemperaturas.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanaTemperaturas.title("Temperaturas registradas en el ensayo")
+  campos=Frame(ventanaTemperaturas)
+  campos.pack()
+
+  answer = simpledialog.askinteger("Registro temperaturas", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
+
+
+
+
+  
+
+  def eliminar():
+    #elimina datos en BBDD de cada ensayo
+    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
+    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el ensayo asociado")
+    if valor=="yes" and answ is not None:
+      miconexion=sqlite3.connect("D:\\tempcontrol.db")
+      micursor=miconexion.cursor()
+      try:
+        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answer))
+        micursor.execute("DELETE FROM ensayos WHERE Id="+str(answer))
+        miconexion.commit()
+      except:
+        messagebox.showerror("Atencion","Error") 
+      finally:
+        micursor.close()
+        miconexion.close()
+      messagebox.showinfo("Atencion","Registro eliminado con exito") 
+    else:
+      messagebox.showerror("Atencion","Cancelado")   
+
+  botonera=Frame(ventanaTemperaturas)
+  botonera.pack()
+  botonparar=Button(botonera, text="Eliminar por Id", command=eliminar)
+  botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+
+
+  tipoLabel=Label(campos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion))
+  tipoLabel.grid(row=1, column=1, sticky="e", padx=10, pady=5)
+  estadoLabel=Label(campos, text="Estado del sensor actualmente "+estadoSensor)
+  estadoLabel.grid(row=2, column=1, sticky="e", padx=10, pady=5)
+
+  Right = Frame(ventanaTemperaturas, width=600, height=500, bd=8, relief="raise")
+  Right.pack(side=RIGHT)
+  scrollbary = Scrollbar(Right, orient=VERTICAL)
+  scrollbarx = Scrollbar(Right, orient=HORIZONTAL)
+  tree = ttk.Treeview(Right, columns=("Id", "hora",  "temperatura","temp_corregida"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  scrollbary.config(command=tree.yview)
+  scrollbary.pack(side=RIGHT, fill=Y)
+  scrollbarx.config(command=tree.xview)
+  scrollbarx.pack(side=BOTTOM, fill=X)
+  tree.heading('Id', text="Id", anchor=W)
+  tree.heading('hora', text="hora", anchor=W)
+ 
+  tree.heading('temperatura', text="temperatura", anchor=W)
+  tree.heading('temp_corregida', text="temp_corregida", anchor=W)
+  
+  tree.column('#0', stretch=NO, minwidth=0, width=0)
+  tree.column('#1', stretch=NO, minwidth=0, width=40)
+  tree.column('#2', stretch=NO, minwidth=0, width=80)
+  tree.column('#3', stretch=NO, minwidth=0, width=80)
+   
+  tree.pack()
+
+  miconexion=sqlite3.connect("D:\\tempcontrol.db")
+  micursor=miconexion.cursor()
+  micursor.execute("SELECT * from temperaturas WHERE Id="+str(answer))
+  datos=micursor.fetchall()
+  
+  tree.delete(*tree.get_children())
+
+  
+  for row in datos:
+      print (row)
+      tree.insert('', 'end', values=(row[0],row[1], row[2],row[2]))   #modificar el factor corrector!!!!!
+
+  micursor.close()
+  miconexion.close()
+
+
+
+####################################################################################################
+
+
+def muestraHistorial():
+  refrescar()
+  ventanaHistorial=Toplevel(root)
+  ventanaHistorial.config(cursor="hand2")
+  ventanaHistorial.geometry("800x400")
+  ventanaHistorial.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanaHistorial.title("Historial del sensor DQO")
+  campos=Frame(ventanaHistorial)
+  campos.pack()
+
+  tipoLabel=Label(campos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion))
+  tipoLabel.grid(row=1, column=1, sticky="e", padx=10, pady=5)
+  estadoLabel=Label(campos, text="Estado del sensor actualmente "+estadoSensor)
+  estadoLabel.grid(row=2, column=1, sticky="e", padx=10, pady=5)
+
+  def eliminar():
+    #elimina datos en BBDD 
+    valor="not"
+    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaHistorial,  minvalue=1, maxvalue=9999)
+    if answ is not None:
+      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+    if valor=="yes" and answ is not None:
+      miconexion=sqlite3.connect("D:\\tempcontrol.db")
+      micursor=miconexion.cursor()
+      try:
+        micursor.execute("DELETE FROM historial WHERE Id="+str(answ))
+        messagebox.showinfo("Atencion","Registro "+str(answ)+" eliminado con exito") 
+        miconexion.commit()
+      except:
+        messagebox.showerror("Atencion","Error") 
+      finally:
+        micursor.close()
+        miconexion.close()  
+    else:
+      messagebox.showerror("Atencion","Cancelado")   
+
+  botonera=Frame(ventanaHistorial)
+  botonera.pack()
+  botonparar=Button(botonera, text="Eliminar por Id", command=eliminar)
+  botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+
+  Right = Frame(ventanaHistorial, width=600, height=500, bd=8, relief="raise")
+  Right.pack(side=RIGHT)
+  scrollbary = Scrollbar(Right, orient=VERTICAL)
+  scrollbarx = Scrollbar(Right, orient=HORIZONTAL)
+  tree = ttk.Treeview(Right, columns=("Id", "fecha", "sensor", "operación", "realizado por", "estado","observaciones"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  scrollbary.config(command=tree.yview)
+  scrollbary.pack(side=RIGHT, fill=Y)
+  scrollbarx.config(command=tree.xview)
+  scrollbarx.pack(side=BOTTOM, fill=X)
+  tree.heading('Id', text="Id", anchor=W)
+  tree.heading('fecha', text="fecha", anchor=W)
+  tree.heading('sensor', text="sensor", anchor=W)
+  tree.heading('operación', text="operación", anchor=W)
+  tree.heading('realizado por', text="realizado por", anchor=W)
+  tree.heading('estado', text="estado", anchor=W)
+  tree.heading('observaciones', text="observaciones", anchor=W)
+  tree.column('#0', stretch=NO, minwidth=0, width=0)
+  tree.column('#1', stretch=NO, minwidth=0, width=40)
+  tree.column('#2', stretch=NO, minwidth=0, width=80)
+  tree.column('#3', stretch=NO, minwidth=0, width=45)
+  tree.column('#4', stretch=NO, minwidth=0, width=150)
+  tree.column('#5', stretch=NO, minwidth=0, width=120)
+  tree.column('#6', stretch=NO, minwidth=0, width=120)
+  tree.column('#7', stretch=NO, minwidth=0, width=200)
+  tree.pack()
+
+  miconexion=sqlite3.connect("D:\\tempcontrol.db")
+  micursor=miconexion.cursor()
+  micursor.execute("SELECT * from historial order by Id")
+  datos=micursor.fetchall() 
+  tree.delete(*tree.get_children())
+ 
+  for row in datos:
+      print (row)
+      tree.insert('', 'end', values=(row[0],row[1], row[2], row[3], row[4], row[5], row[6]))
+
+  micursor.close()
+  miconexion.close()
+
+#############################################################################################
+
+
+def ventanaEstadoSensor():
+
+  refrescar()
+  ventanaEstado=Toplevel(root)
+  ventanaEstado.config(cursor="hand2")
+  ventanaEstado.geometry("630x400")
+  ventanaEstado.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanaEstado.title("Estado actual del sensor")
+  campos=Frame(ventanaEstado)
+  campos.pack()
+  def salir():
+    ventanaEstado.destroy()
+  botonera=Frame(ventanaEstado)
+  botonera.pack()
+  botonparar=Button(botonera, text="Cerrar", command=salir)
+  botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+  
+  if estadoSensor=="Apto":
+    estadoLabel=Label(campos, bg="green", text="Estado del sensor actualmente "+estadoSensor)
+    estadoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  elif estadoSensor=="Observación":
+    estadoLabel=Label(campos, bg="yellow", text="Estado del sensor actualmente "+estadoSensor)
+    estadoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  else:
+    estadoLabel=Label(campos, bg="red", text="Estado del sensor actualmente "+estadoSensor)
+    estadoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+
+  
+  hoyLabel=Label(campos,  text="Hoy: "+str(hoy))
+  hoyLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)  
+
+  tipoLabel=Label(campos,  text="Fecha de la última calibración: "+str(fechaUltimaCalibracion))
+  tipoLabel.grid(row=2, column=0, sticky="e", padx=10, pady=5)
+  ahora = datetime.datetime.utcnow()
+  #d1 = datetime(hoy, "%d/%m/%Y")
+  #d2 = datetime(fechaUltimaCalibracion, "%d/%m/%Y")
+
+  prox=(ahora-datetime.timedelta(days=-366))
+  
+  proximLabel=Label(campos,  text="Próxima calibración en: "+str(prox)+" días")
+  proximLabel.grid(row=3, column=0, sticky="e", padx=10, pady=5)
+  
+  factor80Label=Label(campos, text="Factor corrector de Cianuros:  "+str(factor80)+"ºC")
+  factor80Label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
+  factor150Label=Label(campos, text="Factor corrector de DQO:  "+str(factor150)+"ºC")
+  factor150Label.grid(row=5, column=0, sticky="e", padx=10, pady=5)
+
+  u80Label=Label(campos, text="Incertidumbre expandida CN:  "+str(u80)+"ºC")
+  u80Label.grid(row=6, column=0, sticky="e", padx=10, pady=5)
+  u150Label=Label(campos, text="Incertidumbre expandida DQO:  "+str(u150)+"ºC")
+  u150Label.grid(row=7, column=0, sticky="e", padx=10, pady=5)
+
+  
+###########################################################################################################
+
+
+def ventanaConfig():
+  "Crea una ventana para introducir los datos de configuración"
+  refrescar()
+  ventanaConfig=Toplevel(root)
+  ventanaConfig.config(cursor="hand2")
+  ventanaConfig.geometry("630x500")
+  ventanaConfig.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanaConfig.title("Configuración de la aplicación")
+  campos=Frame(ventanaConfig)
+  campos.pack()
+
+  periodocali=IntVar(value=daysToCalibrate)
+  rangosup=DoubleVar(value=rangosu)
+  rangoinf=DoubleVar(value=rangoin)
+  factorCobertura=DoubleVar(value=factCober)
+  intervalomedida=IntVar(value=intervalomed)
+  tiempomedidaDQO=IntVar(value=duraciondqo)
+  tiempomedidaCiN=IntVar(value=tiempomedidaCN)
+  tempokDQO=DoubleVar(value=tempdqo)
+  tempokCN=DoubleVar(value=tempcn)
+  toleranciaDQO=DoubleVar(value=toleranceDQO)
+  toleranciaCN=DoubleVar(value=toleranceCN)
+        
+ ##################################################################################################### 
+
+  def insertar():
+    #inserta datos de configuracion
+    miconexion=sqlite3.connect("D:\\tempcontrol.db")
+    micursor=miconexion.cursor()
+    datos=periodocali.get(),rangosup.get(),rangoinf.get(),factorCobertura.get(),intervalomedida.get(),tiempomedidaDQO.get(),tiempomedidaCiN.get(),tempokDQO.get(),tempokCN.get(),toleranciaDQO.get(), toleranciaCN.get()
+    try:
+      micursor.execute("INSERT INTO config VALUES(?,?,?,?,?,?,?,?,?,?,?)",(datos))
+      miconexion.commit()
+      messagebox.showinfo("Atencion","Registro creado con éxito ")
+    except:
+      messagebox.showerror("Error","No se ha podido insertar en la base de datos")  
+    finally:
+      micursor.close()
+      miconexion.close()
+    ventanaConfig.destroy()
+
+  cuadroperiodocali=Entry(campos, textvariable=periodocali)
+  cuadroperiodocali.grid(row=0, column=1, padx=10, pady=10)
+  cuadrorangosup=Entry(campos, textvariable=rangosup)
+  cuadrorangosup.grid(row=1, column=1, padx=10, pady=10)
+  cuadrorangoinf=Entry(campos, textvariable=rangoinf)
+  cuadrorangoinf.grid(row=2, column=1, padx=10, pady=10)
+  cuadroK=Entry(campos, textvariable=factorCobertura)
+  cuadroK.grid(row=3, column=1, padx=10, pady=10)
+  cuadrointervalomedida=Entry(campos, textvariable=intervalomedida)
+  cuadrointervalomedida.grid(row=4, column=1, padx=10, pady=10)
+  cuadrotiempomedidaDQO=Entry(campos, textvariable=tiempomedidaDQO)
+  cuadrotiempomedidaDQO.grid(row=5, column=1, padx=10, pady=10)
+  cuadrotempokDQO=Entry(campos, textvariable=tempokDQO)
+  cuadrotempokDQO.grid(row=6, column=1, padx=10, pady=10)
+  cuadrotoleranceDQO=Entry(campos, textvariable=toleranciaDQO)
+  cuadrotoleranceDQO.grid(row=7, column=1, padx=10, pady=10)
+  cuadrotiempomedidaCN=Entry(campos, textvariable=tiempomedidaCiN)
+  cuadrotiempomedidaCN.grid(row=8, column=1, padx=10, pady=10)
+  cuadrotempokCN=Entry(campos, textvariable=tempokCN)
+  cuadrotempokCN.grid(row=9, column=1, padx=10, pady=10)
+  cuadrotoleranceCN=Entry(campos, textvariable=toleranciaCN)
+  cuadrotoleranceCN.grid(row=10, column=1, padx=10, pady=10)
+  #labels
+  periodocaliLabel=Label(campos, text="Periodo calibración (días):")
+  periodocaliLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  rangosupLabel=Label(campos, text="Rango superior del sensor ºC:")
+  rangosupLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+  rangoinfLabel=Label(campos, text="Rango inferior del sensor ºC:")
+  rangoinfLabel.grid(row=2, column=0, sticky="e", padx=10, pady=5)
+  KLabel=Label(campos, text="Factor de cobertura K:")
+  KLabel.grid(row=3, column=0, sticky="e", padx=10, pady=10)
+  intervalomedidaLabel=Label(campos, text="Intervalo medidas en minutos:")
+  intervalomedidaLabel.grid(row=4, column=0, sticky="e", padx=10, pady=10)
+  tiempomedidaDQOLabel=Label(campos, text="Duracion ensayo DQO en minutos:")
+  tiempomedidaDQOLabel.grid(row=5, column=0, sticky="e", padx=10, pady=10)
+  tempokDQOLabel=Label(campos, text="Temperatura correcta DQO ºC:")
+  tempokDQOLabel.grid(row=6, column=0, sticky="e", padx=10, pady=10)
+  toleranceDQOLabel=Label(campos, text="Aceptación DQO ºC:")
+  toleranceDQOLabel.grid(row=7, column=0, sticky="e", padx=10, pady=10)
+  tiempomedidaCNLabel=Label(campos, text="Duración ensayo cianuro en minutos:")
+  tiempomedidaCNLabel.grid(row=8, column=0, sticky="e", padx=10, pady=10)
+  tempokCNLabel=Label(campos, text="Temperatura correcta Cianuro ºC:")
+  tempokCNLabel.grid(row=9, column=0, sticky="e", padx=10, pady=10)
+  toleranceCNLabel=Label(campos, text="Aceptación CN ºC:")
+  toleranceCNLabel.grid(row=10, column=0, sticky="e", padx=10, pady=10)
+
+  miFrame2=Frame(ventanaConfig)
+  miFrame2.pack()
+  botonNuevo=Button(miFrame2, text="Insertar nueva configuración", command=insertar)
+  botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+  botonDelet=Button(miFrame2, text="Cancelar", command=lambda : ventanaConfig.destroy())
+  botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+  
+  ventanaConfig.mainloop()
+
+########################################################################################################
+
+def ventanacalibracion():
+  ' Crea la ventana para introducir los datos de una nueva calibración '
+  ventanacali=Toplevel(root)
+  ventanacali.config(cursor="hand2")
+  ventanacali.geometry("630x500")
+  ventanacali.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanacali.title("Datos de calibración")
+  campos=Frame(ventanacali)
+  campos.pack()
+  fecha=StringVar(value=time.strftime("%d/%m/%Y"))
+  sensor=StringVar(value="SENS1")
+  factor150=DoubleVar()
+  factor80=DoubleVar()
+  operario=StringVar()
+  u80=StringVar()
+  u150=StringVar()
+
+  def eliminarCalibracion():
+    #elimina datos en BBDD de cada ensayo
+    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanacali,  minvalue=1, maxvalue=9999)
+    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+    if valor=="yes" and answ is not None:
+      miconexion=sqlite3.connect("D:\\tempcontrol.db")
+      micursor=miconexion.cursor()
+      try:
+        micursor.execute("DELETE FROM calibracion WHERE Id="+str(answer))
+        miconexion.commit()
+      except:
+        messagebox.showerror("Atencion","Error") 
+      finally:
+        micursor.close()
+        miconexion.close()
+      messagebox.showinfo("Atencion","Registro eliminado con exito") 
+    else:
+      messagebox.showerror("Atencion","Cancelado")   
+
+
+  def limpiarcampos():
+      fecha.set("")
+      sensor.set("")
+      factor150.set("")
+      factor80.set("")
+      operario.set("")
+      textoComentario.delete(1.0,END)
+
+  def insertar():
+    #inserta datos calibracion en BBDD 
+    miconexion=sqlite3.connect("D:\\tempcontrol.db")
+    micursor=miconexion.cursor()
+    datos=fecha.get(),sensor.get(),factor150.get(),factor80.get(),operario.get(),u80.get(),u150.get(),textoComentario.get("1.0",END) 
+    try:
+      micursor.execute("INSERT INTO calibracion VALUES(NULL,?,?,?,?,?,?,?,?)",(datos))
+      miconexion.commit()
+      messagebox.showinfo("Atencion","Registro creado con éxito ")
+    except:
+      messagebox.showerror("Error","No se ha podido insertar en la base de datos")  
+    finally:
+      micursor.close()
+      miconexion.close()
+    ventanacali.destroy()
+    
+  cuadrofecha=Entry(campos, textvariable=fecha)
+  cuadrofecha.grid(row=0, column=1, padx=10, pady=10)
+  cuadrosensor=Entry(campos, textvariable=sensor)
+  cuadrosensor.grid(row=1, column=1, padx=10, pady=10)
+  cuadrofactor150=Entry(campos, textvariable=factor150)
+  cuadrofactor150.grid(row=2, column=1, padx=10, pady=10)
+  cuadrofactor80=Entry(campos, textvariable=factor80)
+  cuadrofactor80.grid(row=3, column=1, padx=10, pady=10)
+  cuadrooperario=Entry(campos, textvariable=operario)
+  cuadrooperario.grid(row=4, column=1, padx=10, pady=10)
+  cuadrou80=Entry(campos, textvariable=u80)
+  cuadrou80.grid(row=5, column=1, padx=10, pady=10)
+  cuadrou150=Entry(campos, textvariable=u150)
+  cuadrou150.grid(row=6, column=1, padx=10, pady=10)
+  #labels
+  fechaLabel=Label(campos, text="Fecha:")
+  fechaLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  sensorLabel=Label(campos, text="Sensor:")
+  sensorLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+  factor150Label=Label(campos, text="Factor a 150ºC:")
+  factor150Label.grid(row=2, column=0, sticky="e", padx=10, pady=5)
+  factor80Label=Label(campos, text="Factor a 80ºC:")
+  factor80Label.grid(row=3, column=0, sticky="e", padx=10, pady=10)
+  operarioLabel=Label(campos, text="Realizado por:")
+  operarioLabel.grid(row=4, column=0, sticky="e", padx=10, pady=10)
+  u80Label=Label(campos, text="Incert exp CN:")
+  u80Label.grid(row=5, column=0, sticky="e", padx=10, pady=10)
+  u150Label=Label(campos, text="Incert exp DQO:")
+  u150Label.grid(row=6, column=0, sticky="e", padx=10, pady=10)
+  comentarioLabel=Label(campos, text="Observaciones:")
+  comentarioLabel.grid(row=7, column=0, sticky="e", padx=10, pady=10)
+  textoComentario=Text(campos, width=16, height=4)
+  textoComentario.grid(row=7, column=1, padx=10, pady=10)
+  scrollVert=Scrollbar(campos, command=textoComentario.yview)
+  scrollVert.grid(row=7, column=2, sticky="nsew")
+  textoComentario.config(yscrollcommand=scrollVert.set)
+
+  miFrame2=Frame(ventanacali)
+  miFrame2.pack()
+  botonNuevo=Button(miFrame2, text="Insertar nueva calibración", command=insertar)
+  botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+  botonDelet=Button(miFrame2, text="Eliminar calibración", command=eliminarCalibracion)
+  botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+  botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcampos)
+  botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
+  botonEdit=Button(miFrame2, text="Editar")
+  botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
+
+  ventanacali.mainloop()
+
+##############################################################################################################
+
+
+def ventanaHistory():  
+  " Crea una ventana para introducir el historial de mantenimiento del sensor"
+
+  ventanaHistorial=Toplevel(root)
+  ventanaHistorial.config(cursor="hand2")
+  ventanaHistorial.geometry("630x400")
+  ventanaHistorial.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanaHistorial.title("Historial del equipo, edición y aporte de información")
+  campos=Frame(ventanaHistorial)
+  campos.pack()
+ 
+  fecha=StringVar(value=time.strftime("%d/%m/%Y"))
+  sensor=StringVar(value="SENS1")
+  operacion=StringVar()
+  operario=StringVar()
+  estado=StringVar()
+
+  def limpiarcampos():
+    fecha.set("")
+    sensor.set("")
+    operacion.set("")
+    operario.set("")
+    estado.set("Apto")
+    textoComentario.delete(1.0,END)
+
+  def insertar():
+    #inserta datos en BBDD de cada ensayo
+    miconexion=sqlite3.connect("D:\\tempcontrol.db")
+    micursor=miconexion.cursor()
+    datos=fecha.get(),sensor.get(),operacion.get(),operario.get(),estado.get(),textoComentario.get("1.0",END) 
+    try:
+      micursor.execute("INSERT INTO historial VALUES(NULL,?,?,?,?,?,?)",(datos))
+      miconexion.commit()
+      messagebox.showinfo("Atencion","Registro creado con éxito ")
+    except:
+      messagebox.showerror("Error","No se ha podido insertar en la base de datos")  
+    finally:
+      micursor.close()
+      miconexion.close()
+    ventanaHistorial.destroy()  
+      
+
+  cuadrofecha=Entry(campos, textvariable=fecha)
+  cuadrofecha.grid(row=0, column=1, padx=10, pady=8)
+  cuadrosensor=Entry(campos, textvariable=sensor)
+  cuadrosensor.grid(row=1, column=1, padx=10, pady=4)
+  cuadrooperacion=Entry(campos, textvariable=operacion)
+  cuadrooperacion.grid(row=2, column=1, padx=10, pady=15)
+  cuadrooperario=Entry(campos, textvariable=operario)
+  cuadrooperario.grid(row=3, column=1, padx=10, pady=10)
+  estado.set("Apto")
+  #cuadroEstado=Entry(campos, textvariable=estado)
+  #cuadroEstado.grid(row=4, column=1, padx=10, pady=10)
+  rb1=Radiobutton(campos, text="Apto para el uso",  value="Apto", variable=estado)
+  rb1.grid(column=1, row=4)
+  rb2=Radiobutton(campos, text="En observación", value="Observacion", variable=estado)
+  rb2.grid(column=2,row=4)
+  rb3=Radiobutton(campos, text="No apto", value="No apto",variable=estado)
+  rb3.grid(column=3,row=4)
+  textoComentario=Text(campos, width=16, height=4)
+  textoComentario.grid(row=5, column=1, padx=10, pady=10)
+  scrollVert=Scrollbar(campos, command=textoComentario.yview)
+  scrollVert.grid(row=5, column=2, sticky="nsew")
+  textoComentario.config(yscrollcommand=scrollVert.set)
+
+  #labels
+
+  fechaLabel=Label(campos, text="Fecha:")
+  fechaLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  sensorLabel=Label(campos, text="Sensor:")
+  sensorLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+  operacionLabel=Label(campos, text="Operación:")
+  operacionLabel.grid(row=2, column=0, sticky="e", padx=10, pady=5)
+  operarioLabel=Label(campos, text="Realizado por:")
+  operarioLabel.grid(row=3, column=0, sticky="e", padx=10, pady=10)
+  comentarioLabel=Label(campos, text="Observaciones:")
+  comentarioLabel.grid(row=5, column=0, sticky="e", padx=10, pady=10)
+  estadoLabel=Label(campos, text="Estado del sensor:")
+  estadoLabel.grid(row=4, column=0, sticky="e", padx=10, pady=10)
+  
+   #botones en el grid de abajo
+
+  miFrame2=Frame(ventanaHistorial)
+  miFrame2.pack()
+  botonNuevo=Button(miFrame2, text="Insertar nuevo ensayo", command=insertar)
+  botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+  botonDelet=Button(miFrame2, text="Eliminar ensayo")
+  botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+  botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcampos)
+  botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
+  botonEdit=Button(miFrame2, text="Editar ensayo")
+  botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
+
+  ventanaHistorial.mainloop()
+
+
+######################################################################################################
+
+
+def ventanaEnsayos():
+  #campos de los ensayos
+  
+  ventanaEnsayos=Toplevel(root)
+  ventanaEnsayos.config(cursor="hand2")
+  ventanaEnsayos.geometry("630x900")
+  ventanaEnsayos.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  campos=Frame(ventanaEnsayos)
+  campos.pack()
+  
+  fecha=StringVar(value=time.strftime("%d/%m/%Y"))
+  sensor=StringVar(value="SENS1")
+  cubeta=IntVar()
+  tipoEnsayo=StringVar(value="DQO")
+  lims1=IntVar()
+  lims2=IntVar()
+  lims3=IntVar()
+  lims4=IntVar()
+  lims5=IntVar()
+  lims6=IntVar()
+  lims7=IntVar()
+  lims8=IntVar()
+  lims9=IntVar()
+  analista=StringVar()
+  control=StringVar()
+
+  #con cuadro texto no hace falta
+  #cuadrotipoEnsayo=Entry(campos, textvariable=tipoEnsayo)
+  #cuadrotipoEnsayo.grid(row=0, column=1, padx=10, pady=10)
+  #tipoEnsayo.set("DQO")
+  rb1=Radiobutton(campos, text="DQO",  value="DQO", variable=tipoEnsayo)
+  rb1.grid(column=1, row=0)
+  rb2=Radiobutton(campos, text="CN", value="CN", variable=tipoEnsayo)
+  rb2.grid(column=2,row=0)
+
+  cuadroFecha=Entry(campos, textvariable=fecha)
+  cuadroFecha.grid(row=1, column=1, padx=10, pady=10)
+
+  #cuadroCubeta=Entry(campos, textvariable=cubeta, width=2)
+  #cuadroCubeta.grid(row=2, column=1, padx=10, pady=10)
+
+  spin=Spinbox(campos, from_=0, to=9, width=1, textvariable=cubeta)
+  spin.grid(row=2, column=1)
+
+  cuadrosensor=Entry(campos, textvariable=sensor)
+  cuadrosensor.grid(row=3, column=1, padx=10, pady=10)
+  cuadrolims1=Entry(campos, textvariable=lims1)  
+  cuadrolims1.grid(row=4, column=1, padx=10, pady=10)
+  cuadrolims2=Entry(campos, textvariable=lims2)  
+  cuadrolims2.grid(row=5, column=1, padx=10, pady=10)
+  cuadrolims3=Entry(campos, textvariable=lims3)  
+  cuadrolims3.grid(row=6, column=1, padx=10, pady=10)
+  cuadrolims4=Entry(campos, textvariable=lims4)  
+  cuadrolims4.grid(row=7, column=1, padx=10, pady=10)
+  cuadrolims5=Entry(campos, textvariable=lims5)  
+  cuadrolims5.grid(row=8, column=1, padx=10, pady=10)
+  cuadrolims6=Entry(campos, textvariable=lims6)  
+  cuadrolims6.grid(row=9, column=1, padx=10, pady=10)
+  cuadrolims7=Entry(campos, textvariable=lims7)  
+  cuadrolims7.grid(row=10, column=1, padx=10, pady=10)
+  cuadrolims8=Entry(campos, textvariable=lims8)  
+  cuadrolims8.grid(row=11, column=1, padx=10, pady=10)
+  cuadrolims9=Entry(campos, textvariable=lims9)  
+  cuadrolims9.grid(row=12, column=1, padx=10, pady=10)
+
+  cuadroctrl=Entry(campos, textvariable=control)  
+  cuadroctrl.grid(row=13, column=1, padx=10, pady=10)
+  cuadroanalista=Entry(campos, textvariable=analista)  
+  cuadroanalista.grid(row=14, column=1, padx=10, pady=10)
+ 
+  textoComentario=Text(campos, width=16, height=4)
+  textoComentario.grid(row=15, column=1, padx=10, pady=10)
+  scrollVert=Scrollbar(campos, command=textoComentario.yview)
+  scrollVert.grid(row=15, column=2, sticky="nsew")
+  textoComentario.config(yscrollcommand=scrollVert.set)
+
+
+  def limpiarcamposEnsayo():
+    fecha.set("")
+    sensor.set("")
+    cubeta.set("")
+    tipoEnsayo.set("DQO")
+    analista.set("")
+    control.set("")
+    lims1.set("")
+    lims2.set("")
+    lims3.set("")
+    lims4.set("")
+    lims5.set("")
+    lims6.set("")
+    lims7.set("")
+    lims8.set("")
+    lims9.set("")
+    textoComentario.delete(1.0,END)
+
+  # labels de los cuadros
+  tipoLabel=Label(campos, text="Tipo ensayo:")
+  tipoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+  fechaLabel=Label(campos, text="Fecha:")
+  fechaLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+  cubetaLabel=Label(campos, text="Cubeta sensor:")
+  cubetaLabel.grid(row=2, column=0, sticky="e", padx=10, pady=10)
+  sensorLabel=Label(campos, text="Sensor:")
+  sensorLabel.grid(row=3, column=0, sticky="e", padx=10, pady=10)
+  lims1Label=Label(campos, text="Num Lims cubeta 1:")
+  lims1Label.grid(row=4, column=0, sticky="e", padx=10, pady=10)
+  lims2Label=Label(campos, text="Num Lims cubeta 2:")
+  lims2Label.grid(row=5, column=0, sticky="e", padx=10, pady=10)
+  lims3Label=Label(campos, text="Num Lims cubeta 3:")
+  lims3Label.grid(row=6, column=0, sticky="e", padx=10, pady=10)
+  lims4Label=Label(campos, text="Num Lims cubeta 4:")
+  lims4Label.grid(row=7, column=0, sticky="e", padx=10, pady=10)
+  lims5Label=Label(campos, text="Num Lims cubeta 5:")
+  lims5Label.grid(row=8, column=0, sticky="e", padx=10, pady=10)
+  lims6Label=Label(campos, text="Num Lims cubeta 6:")
+  lims6Label.grid(row=9, column=0, sticky="e", padx=10, pady=10)
+  lims7Label=Label(campos, text="Num Lims cubeta 7:")
+  lims7Label.grid(row=10, column=0, sticky="e", padx=10, pady=10)
+  lims8Label=Label(campos, text="Num Lims cubeta 8:")
+  lims8Label.grid(row=11, column=0, sticky="e", padx=10, pady=10)
+  lims9Label=Label(campos, text="Num Lims cubeta 9:")
+  lims9Label.grid(row=12, column=0, sticky="e", padx=10, pady=10)
+
+  controlLabel=Label(campos, text="Controles:")
+  controlLabel.grid(row=13, column=0, sticky="e", padx=10, pady=10)
+  analistaLabel=Label(campos, text="Analista:")
+  analistaLabel.grid(row=14, column=0, sticky="e", padx=10, pady=10)
+  comentLabel=Label(campos, text="Observaciones:")
+  comentLabel.grid(row=15, column=0, sticky="e", padx=10, pady=10)
+ 
+
+  def eliminarEnsayo():
+    #elimina datos en BBDD de cada ensayo
+    answer = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaEnsayos,  minvalue=1, maxvalue=9999)
+    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+    if valor=="yes" and answer is not None:
+      miconexion=sqlite3.connect("D:\\tempcontrol.db")
+      micursor=miconexion.cursor()
+      try:
+        micursor.execute("DELETE FROM ensayos WHERE Id="+str(answer))
+        miconexion.commit()
+      except:
+        messagebox.showerror("Atencion","Error") 
+      finally:
+        micursor.close()
+        miconexion.close()
+      messagebox.showinfo("Atencion","Registro eliminado con exito") 
+    else:
+      messagebox.showerror("Atencion","Cancelado")    
+
+
+  def insertarEnsayo():
+    #inserta datos en BBDD de cada ensayo
+    miconexion=sqlite3.connect("D:\\tempcontrol.db")
+    micursor=miconexion.cursor()
+    datos=tipoEnsayo.get(),fecha.get(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END) 
+    try:
+      micursor.execute("INSERT INTO ensayos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(datos))
+      miconexion.commit()
+      messagebox.showinfo("Atencion","Registro creado con éxito ")
+    except:
+      messagebox.showerror("Error","No se ha podido insertar en la base de datos")  
+    finally:
+      micursor.close()
+      miconexion.close()
+    leertemp()  
+
+
+
+  def editarEnsayo():
+    #lee datos en BBDD de cada ensayo
+    answer = simpledialog.askinteger("Lectura registros...", "Introduce el numero de Id",  parent=ventanaEnsayos,  minvalue=1, maxvalue=9999)
+    if answer is not None:
+      miconexion=sqlite3.connect("tempcontrol.db")
+      micursor=miconexion.cursor()
+      try:
+        micursor.execute("SELECT * FROM ensayos WHERE Id="+str(answer))
+        miconexion.commit()
+        for dato in a:    
+          tipoEnsayo.set(dato[1])
+          fecha.set(dato[2])
+          cubeta.set(dato[3])
+          lims1.set(dato[4])
+          lims2.set(dato[5])
+          lims3.set(dato[6])
+          lims4.set(dato[7])
+          lims5.set(dato[8])
+          lims6.set(dato[9])
+          lims7.set(dato[10])
+          lims8.set(dato[11])
+          lims9.set(dato[12])
+          control.set(dato[13])
+          analista.set(dato[14])
+          textoComentario.set(dato[15])
+      except:
+        messagebox.showerror("Atencion","Error") 
+      finally:
+        micursor.close()
+        miconexion.close()
+    else:
+      messagebox.showerror("Atencion","Cancelado")    
+
+
+  #botones en el grid de abajo
+
+  miFrame2=Frame(ventanaEnsayos)
+  miFrame2.pack()
+  botonNuevo=Button(miFrame2, text="Insertar nuevo ensayo", command=insertarEnsayo)
+  botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+  botonDelet=Button(miFrame2, text="Eliminar ensayo", command=eliminarEnsayo)
+  botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+  botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcamposEnsayo)
+  botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
+  botonEdit=Button(miFrame2, text="Editar ensayo", command=editarEnsayo)
+  botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
+  
+  ventanaEnsayos.mainloop()
+
+  def actualizarEnsayo():
+    #actualiza datos en BBDD de cada ensayo
+    miconexion=sqlite3.connect("tempcontrol.db")
+    micursor=miconexion.cursor()
+
+    datos=fecha.get(),tipoEnsayo.get(),textoComentario.get("1.0",END) 
+    micursor.execute("UPDATE ensayos SET fecha=?, tipoEnsayo=?"+" WHERE Id=",(datos))
+
+    miconexion.commit()
+    messagebox.showinfo("Atencion","Registro actualizado con éxito ")
+    miconexion.close()
+
+####################################################################################################
+
+def salirAplicacion():
+	valor=messagebox.askquestion("salir", "Deseas salir de verdad?")
+	if valor=="yes":
+		root.destroy()
+	
+##################################################################################################
+  
+def license():
+  messagebox.showinfo("Licencia", "Do what the fuck you want to public license.")
+
+####################################################################################################  
+
+
+
+def detenerArduino(): 
+    
+    #messagebox.showinfo("xxxx","ggggg")
+  
+    sTemp=1000
+    
+    #hilo2.join()
+    #ventanaLectura.destroy
+
+def leertemp():
+  temp_actual=StringVar()
+  #relleno =StringVar("")
+  refrescar()
+  ventanaLectura=Toplevel(root)
+  ventanaLectura.config(cursor="pirate")
+  ventanaLectura.geometry("630x400")
+  ventanaLectura.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
+  ventanaLectura.title("Leyendo datos del sensor...")
+  temp_actual="00"
+  #termometro=Frame(ventanaLectura)
+  #labeltemp=Label(termometro, text="xx")#textvariable=temp_actual)
+  #labeltemp.grid(row=1, column=0)
+  
+  botonera=Frame(ventanaLectura)
+  botonera.pack()
+  botonmedida=Button(botonera, text="XXX", command=detenerArduino)
+  botonmedida.grid(row=0, column=0, sticky="e", padx=10, pady=10)
+
+
+
+  campos=Frame(ventanaLectura)
+  campos.pack()
+
+  R= Frame(campos, width=500, height=350, bd=8, relief="raise")
+  R.pack(side=RIGHT)
+  scrollbary = Scrollbar(R, orient=VERTICAL)
+  scrollbarx = Scrollbar(R, orient=HORIZONTAL)
+  tree = ttk.Treeview(R, columns=( "hora","temperatura","temp_corregida"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  scrollbary.config(command=tree.yview)
+  scrollbary.pack(side=RIGHT, fill=Y)
+  scrollbarx.config(command=tree.xview)
+  scrollbarx.pack(side=BOTTOM, fill=X)
+  tree.heading('hora', text="hora", anchor=W)
+  tree.heading('temperatura', text="temperatura", anchor=W)
+  tree.heading('temp_corregida', text="temp_corregida", anchor=W)
+  tree.column('#0', stretch=NO, minwidth=0, width=10)
+  tree.column('#1', stretch=NO, minwidth=0, width=40)
+  tree.column('#2', stretch=NO, minwidth=0, width=40)
+  tree.pack()
+  tree.delete(*tree.get_children())
+  
+  
+
+  def visualiza():
+    refrescar()
+    fichero=open('C:/Program Files/Python37/informe_sensores.csv','a') 
+    conex=sqlite3.connect("D:\\tempcontrol.db")
+    cursor1=conex.cursor() 
+    #inicio=time.time()  
+    #flag='x'
+    tiempo=0
+    factorx=0
+    contadorIncumplimientos=0
+  
+    cursorCalibracion=conex.cursor()
+    cursorCalibracion.execute("SELECT * FROM calibracion where fecha=(SELECT MAX(fecha) from calibracion)") 
+    cursorId=conex.cursor()
+    cursorId.execute("SELECT MAX(Id) from ensayos ")
+    conex.commit()
+    CalibracionActual=cursorCalibracion.fetchall()
+    for factor in CalibracionActual:
+      factorx=factor[5]
+   
+    miId=cursorId.fetchone()
+    cursorId.close()
+    cursorCalibracion.close()  
+    #messagebox.showinfo(miId)  
+
+    TempMin=float(sTemp)
+    TempMin=TempMin+factorx  
+    TempMax=float(sTemp)
+    TempMax=TempMax+factorx
+    while tiempo<30 and sTemp!="1000":
+      time.sleep(2) 
+      tiempo=tiempo+2
+      if int(sTemp)>999:
+        cursor1.close()
+        conex.close()
+        break
+      corregida=float(sTemp)+float(factorx)
+      if float(corregida)<TempMin:
+        TempMin=float(corregida)
+      if float(corregida)>TempMax:
+        TempMax=float(corregida)
+
+
+      if corregida< (tempdqo+factorx)-toleranceDQO:
+        contadorIncumplimientos++
+      if corregida> (tempdqo+factorx)+toleranceDQO:
+        contadorIncumplimientos++
+
+      tree.insert('', 'end', values=(hora,float(sTemp),float(corregida) )
+
+     # labeltemp["text"]=str(sTemp)
+
+      botonmedida["text"]="Temperatura actual: "+str(sTemp)+"ºC / Corregida : "+str(corregida)+"ºC / Temp min: "+str(TempMin)+"ºC  /  Temp max: "+str(TempMax)+"ºC"+ " No conformidades= "+str(contadorIncumplimientos)
+      ventanaLectura.update()
+      
+      datos=miId[0],hora,sTemp,corregida  
+      fichero.write(str(hora)+','+str(sTemp)+str(corregida)+'\n')              
+      cursor1.execute("INSERT INTO temperaturas (Id,hora,temperatura,corregida) VALUES ( ?,?,?,?)",(datos))
+      conex.commit()
+    cursor1.close()
+    conex.close()  
+    fichero.close()
+    messagebox.showinfo("info","Fin del ensayo en "+str(int(tiempo)/60)+" minutos. Los valores no conformes han sido "+str(contadorIncumplimientos))
+  
+
+  #Label1=Label(campos, textvariable=relleno)
+  #Label1.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+
+
+
+  hilo2 = threading.Thread(target=visualiza)
+  hilo2.start()
+ 
+  ventanaLectura.mainloop()   
+ 
+    
+    
+###########################################################################################################
+def hiloaArduino():
+  thread1 = threading.Thread(target=arduino, daemon=TRUE)
+  thread1.start()
+  
+
+def tablas():
+
+  miconexion=sqlite3.connect("D:\\tempcontrol.db")
+  micursor=miconexion.cursor()
+  micursor.execute('''    CREATE TABLE IF NOT EXISTS config (    diascalibracion integer,    rangosup real,    rangoinf real,    factorCobertura real,    intervalomedida integer,    duracionDQO integer,    duracionCN integer,    tempDQO integer,    tempCN integer,   acaeptacionDQO real, aceptacionCN real   );''')  
+  micursor.execute('''    CREATE TABLE IF NOT EXISTS ensayos (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    tipo text,    fecha text ,    sensor text,    cubeta integer,    lims1 integer,    lims2 integer,    lims3 integer,    lims4 integer,    lims5 integer,    lims6 integer,    lims7 integer,    lims8 integer,    lims9 integer,    control text,    analista text,    comentario text   );''')
+  micursor.execute('''    CREATE TABLE IF NOT EXISTS historial (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operacion text,    operario text,    estado text,    comentario text    );''')
+  micursor.execute('''    CREATE TABLE IF NOT EXISTS calibracion (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operario text,    factor80 real,    factor150 real, u80 real, u150 real,   comentario text    );''')
+  micursor.execute('''    CREATE TABLE IF NOT EXISTS temperaturas (    Id INTEGER,    hora text,     temperatura real     );''')
+  #miconexion.commit()
+  messagebox.showinfo("Tablas de ensayos creadas con éxito")  
+  micursor.close()
+  miconexion.close()
+
+###############################################################################################################
+
+def tablas44():
+  miconexion=sqlite3.connect('D:\tempcontrol.db')
+  micursor=miconexion.cursor()
+  try:
+    micursor.execute('''
+      CREATE TABLE IF NOT EXISTS config (
+      diascalibracion integer,
+      rangosup real,
+      rangoinf real,
+      factorCobertura real,
+      intervalomedida integer,
+      duracionDQO integer,
+      duracionCN integer,
+      tempDQO integer,
+      tempCN integer,
+      aceptacionDQO real,
+      aceptacionCN real
+
+      );''')  
+    micursor.execute('''
+      CREATE TABLE IF NOT EXISTS ensayos (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo text,
+      fecha text ,
+      sensor text,
+      cubeta integer,
+      lims1 integer,
+      lims2 integer,
+      lims3 integer,
+      lims4 integer,
+      lims5 integer,
+      lims6 integer,
+      lims7 integer,
+      lims8 integer,
+      lims9 integer,
+      control text,
+      analista text,
+      comentario text,
+      foreign key (Id) references temperaturas(Id)
+      on delete cascade
+      on update cascade
+      );''')
+    micursor.execute('''
+      CREATE TABLE IF NOT EXISTS historial (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fecha text,
+      sensor text,
+      operacion text,
+      operario text,
+      estado text,
+      comentario text
+      );''')
+    micursor.execute('''
+      CREATE TABLE IF NOT EXISTS calibracion (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fecha text,
+      sensor text,
+      operario text,
+      factor80 real,
+      factor150 real,
+      u80 real,
+      u150 real,
+      comentario text
+      );''')
+    micursor.execute('''
+      CREATE TABLE IF NOT EXISTS temperaturas (
+      Id INTEGER,
+      hora text,
+      tiempo integer,
+      temperatura real 
+      );''')
+
+    messagebox.showinfo("Tablas de ensayos creadas con éxito")  
+  except:
+    messagebox.showwarning("Atención, Error en creacion de tablas.")
+  finally:
+    micursor.close()
+    miconexion.close()
+
+######################################################################################################
+# interfaz grafica general de la aplicacion
+
+
+
+
+#menu superior
+barraMenu=Menu(root)
+root.config(menu=barraMenu, width=800, heigh=500)
+ensayosMenu=Menu(barraMenu, tearoff=0)
+ensayosMenu.add_command(label="Iniciar Ensayo", command=ventanaEnsayos)
+ensayosMenu.add_command(label="Ver ensayosMenu", command=muestraEnsayos)
+ensayosMenu.add_command(label="Informe global", command=salirAplicacion)
+ensayosMenu.add_command(label="Conectar con sensor" , command=hiloaArduino)
+ensayosMenu.add_command(label="Ver temperaturas" , command=muestraTemperaturas)
+ensayosMenu.add_separator()
+ensayosMenu.add_command(label="Personalizar", command=ventanaConfig)
+ensayosMenu.add_command(label="Salir", command=salirAplicacion)
+
+SensoresMenu=Menu(barraMenu, tearoff=0)
+SensoresMenu.add_command(label="Estado sensor", command=ventanaEstadoSensor)
+SensoresMenu.add_command(label="Ver calibraciones", command=muestraCalibracion)
+SensoresMenu.add_command(label="Calibrar sensor", command=ventanacalibracion)
+SensoresMenu.add_command(label="Ver historial sensor", command=muestraHistorial )
+SensoresMenu.add_command(label="Añadir incidencia sensor", command=ventanaHistory)
+SensoresMenu.add_command(label="Ver ficha equipo sensor", command=certificado)
+
+archivoMenu=Menu(barraMenu, tearoff=0)
+archivoMenu.add_command(label="Exportar")
+archivoMenu.add_command(label="Importar")
+archivoMenu.add_command(label="Imprimir")
+archivoMenu.add_separator()
+archivoMenu.add_command(label="Hacer copia seguridad")
+archivoMenu.add_command(label="Configurar copias de seguridad")
+archivoMenu.add_command(label="Cargar copia de seguridad")
+archivoMenu.add_command(label="Regenerar tablas", command=tablas)
+
+ayudaMenu=Menu(barraMenu, tearoff=0)
+ayudaMenu.add_command(label="Ayuda", command=certificado)
+ayudaMenu.add_command(label="Documentación técnica")
+ayudaMenu.add_command(label="Licencia", command=license)
+ayudaMenu.add_command(label="Acerca de esto")
+
+barraMenu.add_cascade(label="Ensayos", menu=ensayosMenu)
+barraMenu.add_cascade(label="Sensores", menu=SensoresMenu)
+barraMenu.add_cascade(label="Archivo", menu=archivoMenu)
+barraMenu.add_cascade(label="Ayuda", menu=ayudaMenu)
+
+
+
+#pantalla principal, tablas treeview
+
+#style=ttk.style()
+#style.configure("mystyle.Treeview", highlightthickness=0, bd=0, font=(Calibri)',11')
+
+#diascalibrar=Label(text=daysToCalibrate, relief=RIDGE)
+#diascalibrar.grid(row=0, column=0, sticky=N)
+
+#imagenh=PhotoImage(file="C:\\Users\\Gorbe\\OneDrive\\Documentos\\digestor.png")
+
+#imageLabel=Label(root, image=imagenh).place(x=2,y=3)
+
+
+#for i in range(5):
+    #for j in range(4):
+       # l = Label(text='%d.%d' % (i, j), relief=RIDGE)
+       # l.grid(row=i+1, column=j+1, sticky=NSEW)
+
+root.mainloop()
+
+
