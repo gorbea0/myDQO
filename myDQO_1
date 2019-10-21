@@ -257,7 +257,7 @@ def muestraEnsayos():
 
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
-  micursor.execute("SELECT * from ensayos order by Id")
+  micursor.execute("SELECT * from ensayos order by Id desc")
   datos=micursor.fetchall()
   
   tree.delete(*tree.get_children())
@@ -343,7 +343,7 @@ def muestraCalibracion():
 
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
-  micursor.execute("SELECT * from calibracion order by Id")
+  micursor.execute("SELECT * from calibracion order by Id desc")
   datos=micursor.fetchall()
   
   tree.delete(*tree.get_children())
@@ -370,7 +370,7 @@ def muestraTemperaturas():
   campos=Frame(ventanaTemperaturas)
   campos.pack()
 
-  answer = simpledialog.askinteger("Registro temperaturas", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
+  #answer = simpledialog.askinteger("Registro temperaturas", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
 
 
 
@@ -380,20 +380,23 @@ def muestraTemperaturas():
   def eliminar():
     #elimina datos en BBDD de cada ensayo
     answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
-    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el ensayo asociado")
+    if answ is not None:
+          valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el ensayo asociado")
+
     if valor=="yes" and answ is not None:
       miconexion=sqlite3.connect("D:\\tempcontrol.db")
       micursor=miconexion.cursor()
       try:
-        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answer))
-        micursor.execute("DELETE FROM ensayos WHERE Id="+str(answer))
+        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answ))
+        micursor.execute("DELETE FROM ensayos WHERE Id="+str(answ))
+        messagebox.showinfo("Atencion","Registro eliminado con exito")
         miconexion.commit()
       except:
         messagebox.showerror("Atencion","Error") 
       finally:
         micursor.close()
         miconexion.close()
-      messagebox.showinfo("Atencion","Registro eliminado con exito") 
+       
     else:
       messagebox.showerror("Atencion","Cancelado")   
 
@@ -519,7 +522,7 @@ def muestraHistorial():
 
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
-  micursor.execute("SELECT * from historial order by Id")
+  micursor.execute("SELECT * from historial order by Id desc")
   datos=micursor.fetchall() 
   tree.delete(*tree.get_children())
  
@@ -785,17 +788,23 @@ def ventanacalibracion():
   scrollVert.grid(row=7, column=2, sticky="nsew")
   textoComentario.config(yscrollcommand=scrollVert.set)
 
+  def sal():
+    ventanacali.destroy()
+
+
   miFrame2=Frame(ventanacali)
   miFrame2.pack()
   botonNuevo=Button(miFrame2, text="Insertar nueva calibración", command=insertar)
   botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
-  botonDelet=Button(miFrame2, text="Eliminar calibración", command=eliminarCalibracion)
-  botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+  #botonDelet=Button(miFrame2, text="Eliminar calibración", command=eliminarCalibracion)
+  #botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
   botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcampos)
   botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
-  botonEdit=Button(miFrame2, text="Editar")
-  botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
+  #botonEdit=Button(miFrame2, text="Editar")
+  #botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
 
+  botoncan=Button(miFrame2, text="Cancelar", command=sal)
+  botoncan.grid(row=1, column=3, sticky="e", padx=10, pady=10)
   ventanacali.mainloop()
 
 ##############################################################################################################
@@ -883,16 +892,23 @@ def ventanaHistory():
   
    #botones en el grid de abajo
 
+  def cancela():
+    ventanaHistorial.destroy()
+
+
+
   miFrame2=Frame(ventanaHistorial)
   miFrame2.pack()
-  botonNuevo=Button(miFrame2, text="Insertar nuevo ensayo", command=insertar)
+  botonNuevo=Button(miFrame2, text="Insertar datos", command=insertar)
   botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
-  botonDelet=Button(miFrame2, text="Eliminar ensayo")
-  botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+  #botonDelet=Button(miFrame2, text="Eliminar ensayo")
+  #botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
   botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcampos)
   botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
-  botonEdit=Button(miFrame2, text="Editar ensayo")
-  botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
+  #botonEdit=Button(miFrame2, text="Editar ensayo")
+  #botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
+  botonCan=Button(miFrame2, text="Cancelar", command=cancela)
+  botonCan.grid(row=1, column=3, sticky="e", padx=10, pady=10)
 
   ventanaHistorial.mainloop()
 
@@ -1104,16 +1120,18 @@ def ventanaEnsayos():
 
 
   #botones en el grid de abajo
+  def cancela():
+    ventanaEnsayos.destroy()
 
   miFrame2=Frame(ventanaEnsayos)
   miFrame2.pack()
-  botonNuevo=Button(miFrame2, text="Insertar nuevo ensayo", command=insertarEnsayo)
+  botonNuevo=Button(miFrame2, text="Insertar datos y comenzar el ensayo", command=insertarEnsayo)
   botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
-  botonDelet=Button(miFrame2, text="Eliminar ensayo", command=eliminarEnsayo)
-  botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+  #botonDelet=Button(miFrame2, text="Eliminar ensayo", command=eliminarEnsayo)
+  #botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
   botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcamposEnsayo)
   botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
-  botonEdit=Button(miFrame2, text="Editar ensayo", command=editarEnsayo)
+  botonEdit=Button(miFrame2, text="Cancelar", command=cancela)
   botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
   
   ventanaEnsayos.mainloop()
@@ -1150,7 +1168,7 @@ def detenerArduino():
     
     #messagebox.showinfo("xxxx","ggggg")
   
-    sTemp=1000
+    sTemp=10000
     
     #hilo2.join()
     #ventanaLectura.destroy
@@ -1173,8 +1191,8 @@ def leertemp():
   botonera.pack()
   botonmedida=Button(botonera, text="XXX", command=detenerArduino)
   botonmedida.grid(row=0, column=0, sticky="e", padx=10, pady=10)
-
-
+  botonDatos=Button(botonera, text="XXX")
+  botonDatos.grid(row=1, column=0, sticky="e", padx=10, pady=10)
 
   campos=Frame(ventanaLectura)
   campos.pack()
@@ -1207,7 +1225,8 @@ def leertemp():
     #inicio=time.time()  
     #flag='x'
     tiempo=0
-    factorx=0
+    #factorx=0
+    now = time.time()
     contadorIncumplimientos=0
   
     cursorCalibracion=conex.cursor()
@@ -1231,31 +1250,34 @@ def leertemp():
     while tiempo<30 and sTemp!="1000":
       time.sleep(2) 
       tiempo=tiempo+2
-      if int(sTemp)>999:
+      if float(sTemp)>999:
         cursor1.close()
         conex.close()
         break
-      corregida=float(sTemp)+float(factorx)
-      if float(corregida)<TempMin:
-        TempMin=float(corregida)
-      if float(corregida)>TempMax:
-        TempMax=float(corregida)
+      
+      corregida=float(sTemp)+factorx
+      temperaturaTopeDownDQO=(tempdqo+factorx)-toleranceDQO-u150
+      temperaturaTopeUpDQO=(tempdqo+factorx)+toleranceDQO+u150
 
+      if corregida<TempMin:
+        TempMin=corregida
+      if corregida>TempMax:
+        TempMax=corregida
+      if corregida < temperaturaTopeDownDQO:
+        contadorIncumplimientos=contadorIncumplimientos+1
+      if corregida > temperaturaTopeUpDQO:       
+        contadorIncumplimientos=contadorIncumplimientos+1
 
-      if corregida< (tempdqo+factorx)-toleranceDQO:
-        contadorIncumplimientos++
-      if corregida> (tempdqo+factorx)+toleranceDQO:
-        contadorIncumplimientos++
+      tree.insert('', 'end', values=(hora,float(sTemp),float(corregida) ))
 
-      tree.insert('', 'end', values=(hora,float(sTemp),float(corregida) )
-
-     # labeltemp["text"]=str(sTemp)
-
-      botonmedida["text"]="Temperatura actual: "+str(sTemp)+"ºC / Corregida : "+str(corregida)+"ºC / Temp min: "+str(TempMin)+"ºC  /  Temp max: "+str(TempMax)+"ºC"+ " No conformidades= "+str(contadorIncumplimientos)
+          # labeltemp["text"]=str(sTemp)
+      botonmedida["text"]="Temperatura actual: "+str(sTemp)+"ºC / Corregida : "+str(corregida)+"ºC / Temp min: "+str(TempMin)+"ºC  /  Temp max: "+str(TempMax)+"ºC /  No conformidades= "+str(contadorIncumplimientos)
+      botonDatos["text"]="Factor corrector: "+str(factorx)+" / Temperatura max admisible = "+str(temperaturaTopeUpDQO)+" /  Temp minima admisible = "+str(temperaturaTopeDownDQO)
+     
       ventanaLectura.update()
       
       datos=miId[0],hora,sTemp,corregida  
-      fichero.write(str(hora)+','+str(sTemp)+str(corregida)+'\n')              
+      fichero.write(str(miId[0])+","+str(now)+","+str(hora)+','+str(sTemp)+","+str(corregida)+'\n')              
       cursor1.execute("INSERT INTO temperaturas (Id,hora,temperatura,corregida) VALUES ( ?,?,?,?)",(datos))
       conex.commit()
     cursor1.close()
@@ -1446,5 +1468,8 @@ barraMenu.add_cascade(label="Ayuda", menu=ayudaMenu)
        # l.grid(row=i+1, column=j+1, sticky=NSEW)
 
 root.mainloop()
+
+
+
 
 
