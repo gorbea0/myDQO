@@ -184,7 +184,6 @@ def muestraEnsayos():
   tipoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
   estadoLabel=Label(campos, text="Estado del sensor actualmente "+estadoSensor)
   estadoLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
-
   f150Label=Label(campos, text="Factor corrector DQO a fecha de hoy: "+str(factor150))
   f150Label.grid(row=2, column=0, sticky="e", padx=10, pady=5)
   
@@ -223,11 +222,11 @@ def muestraEnsayos():
   def cierra():
     ventanaEnsayos.destroy()
     
-  botonEdit=Button(botonera, text="Editar ensayo", command=ventanaEditarEnsayos)
+  botonEdit=Button(botonera, text="Editar ensayo", command= lambda : ventanaEditarEnsayos(tree.item(tree.selection())['values'][0]))
   botonEdit.grid(row=1, column=4, sticky="e", padx=10, pady=10)
 
 
-  botonDatos=Button(botonera, text="Ver datos ensayo", command=ventanaDatosEnsayo)
+  botonDatos=Button(botonera, text="Ver datos ensayo", command= lambda : ventanaDatosEnsayo(tree.item(tree.selection())['values'][0]))
   botonDatos.grid(row=1, column=5, sticky="e", padx=10, pady=10)
   botonCerrar=Button(botonera, text="Cerrar", command=cierra)
   botonCerrar.grid(row=1, column=6, sticky="e", padx=10, pady=10)
@@ -1124,7 +1123,7 @@ def ventanaEnsayos():
 ###################################################################################################
 
 
-def ventanaDatosEnsayo():
+def ventanaDatosEnsayo(a):
   #campos de los ensayos
   ventanaDatosEnsayo=Toplevel(root)
   ventanaDatosEnsayo.config(cursor="hand2")
@@ -1134,12 +1133,12 @@ def ventanaDatosEnsayo():
   campos=Frame(ventanaDatosEnsayo)
   campos.pack() 
 
-  miId = simpledialog.askinteger("Datos del ensayo", "Introduce el numero de Id",  parent=ventanaDatosEnsayo,  minvalue=1, maxvalue=9999)
-  # validar el miId !!!
+  IdSeleccionada=a
+  #IdSeleccionada = simpledialog.askinteger("Datos del ensayo", "Introduce el numero de Id",  parent=ventanaDatosEnsayo,  minvalue=1, maxvalue=9999)
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
   try:
-    micursor.execute("SELECT * FROM ensayos WHERE Id="+str(miId))
+    micursor.execute("SELECT * FROM ensayos WHERE Id="+str(IdSeleccionada))
     miconexion.commit()
     datos= micursor.fetchall()
     for row in datos:  
@@ -1208,7 +1207,7 @@ def ventanaDatosEnsayo():
   comentLabel=Label(campos, text="Observaciones: "+str(textoComentario))
   comentLabel.grid(row=15, column=0, sticky="e", padx=10, pady=10)
   
-  IdLabel=Label(campos, text="Id: "+str(miId))
+  IdLabel=Label(campos, text="Id: "+str(IdSeleccionada))
   IdLabel.grid(row=1, column=1, sticky="e", padx=10, pady=10)
   fechaLabel=Label(campos, text="fecha: "+datetime.datetime.strftime(datetime.datetime.strptime(fecha,"%Y-%m-%d"),"%d-%m-%Y"))
   fechaLabel.grid(row=2, column=1, sticky="e", padx=10, pady=10)
@@ -1249,7 +1248,7 @@ def ventanaDatosEnsayo():
 ####################################################################################################
 
 
-def ventanaEditarEnsayos():
+def ventanaEditarEnsayos(a):
   #campos de los ensayos
   
   def limpiarcamposEnsayo():
@@ -1367,48 +1366,41 @@ def ventanaEditarEnsayos():
   analistaLabel.grid(row=14, column=0, sticky="e", padx=10, pady=10)
   comentLabel=Label(campos, text="Observaciones:")
   comentLabel.grid(row=15, column=0, sticky="e", padx=10, pady=10)
-    #lee datos en BBDD de cada ensayo
-  
-  answer = simpledialog.askinteger("Edición Registro...", "Introduce el numero de Id a editar",  parent=ventanaEdEnsayos,  minvalue=1, maxvalue=9999)
-  if answer is not None:
-    miconexion=sqlite3.connect("D:\\tempcontrol.db")
-    micursor=miconexion.cursor()
-    try:
-      micursor.execute("SELECT * FROM ensayos WHERE Id="+str(answer))
-      miconexion.commit()
-      a=micursor.fetchall()
-      #print (a)
-    #  print (a.rowcount)
-     # messagebox.showinfo(a.rowcount)
-      #if a.rowcount<1:
-        #messagebox.showerror("Aviso","¡No existe el Id"+str(answer))
-        #ventanaEdEnsayos.destroy()
-  
-      for dato in a:    
-        tipoEnsayo.set(dato[1])
-        fechas=dato[2]
-        sensor.set(dato[3])
-        cubeta.set(dato[4])
-        lims1.set(dato[5])
-        lims2.set(dato[6])
-        lims3.set(dato[7])
-        lims4.set(dato[8])
-        lims5.set(dato[9])
-        lims6.set(dato[10])
-        lims7.set(dato[11])
-        lims8.set(dato[12])
-        lims9.set(dato[13])
-        control.set(dato[14])
-        analista.set(dato[15])
-        textoComentario.insert(1.0,dato[16])
-    except:
-      messagebox.showerror("Atencion","Error BBDD") 
-    finally:
-      micursor.close()
-      miconexion.close()
-  else:
-    messagebox.showerror("Atencion","Cancelado")    
-    cancela()
+  #lee datos en BBDD de cada ensayo
+  answer=a
+  #answer = simpledialog.askinteger("Edición Registro...", "Introduce el numero de Id a editar",  parent=ventanaEdEnsayos,  minvalue=1, maxvalue=9999)
+  #if answer is not None:
+  miconexion=sqlite3.connect("D:\\tempcontrol.db")
+  micursor=miconexion.cursor()
+  try:
+    micursor.execute("SELECT * FROM ensayos WHERE Id="+str(answer))
+    miconexion.commit()
+    a=micursor.fetchall()
+      #ventanaEdEnsayos.destroy()
+
+    for dato in a:    
+      tipoEnsayo.set(dato[1])
+      fechas=dato[2]
+      sensor.set(dato[3])
+      cubeta.set(dato[4])
+      lims1.set(dato[5])
+      lims2.set(dato[6])
+      lims3.set(dato[7])
+      lims4.set(dato[8])
+      lims5.set(dato[9])
+      lims6.set(dato[10])
+      lims7.set(dato[11])
+      lims8.set(dato[12])
+      lims9.set(dato[13])
+      control.set(dato[14])
+      analista.set(dato[15])
+      textoComentario.insert(1.0,dato[16])
+  except:
+    messagebox.showerror("Atencion","Error BBDD") 
+  finally:
+    micursor.close()
+    miconexion.close()
+
 
   ano=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%Y")
   mes=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%m")
