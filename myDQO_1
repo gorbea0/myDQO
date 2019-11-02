@@ -4,8 +4,7 @@ import calendar
 import datetime
 #from datetime import datetime, date, time, timedelta
 import os
-from tkcalendar import DateEntry
-# import pymysql      
+from tkcalendar import DateEntry    
 import sqlite3
 from tkinter import *
 from tkinter import messagebox
@@ -18,7 +17,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 hoy=time.strftime("%d/%m/%Y")
-#hoy=time.strftime("%Y/%m/%d")
 root=Tk()
 root.title("Control de la temperatura en ensayos de DQO")
 root.geometry("1000x640")
@@ -228,8 +226,11 @@ def muestraEnsayos():
 
   botonDatos=Button(botonera, text="Ver datos ensayo", command= lambda : ventanaDatosEnsayo(tree.item(tree.selection())['values'][0]))
   botonDatos.grid(row=1, column=5, sticky="e", padx=10, pady=10)
+  botonVerTemp=Button(botonera, text="Ver temperaturas", command= lambda : muestraTemperaturas(tree.item(tree.selection())['values'][0]))
+  botonVerTemp.grid(row=1, column=6, sticky="e", padx=10, pady=10)
+
   botonCerrar=Button(botonera, text="Cerrar", command=cierra)
-  botonCerrar.grid(row=1, column=6, sticky="e", padx=10, pady=10)
+  botonCerrar.grid(row=1, column=7, sticky="e", padx=10, pady=10)
 
   Right = Frame(ventanaEnsayos, width=500, height=350, bd=8, relief="raise")
   Right.pack(side=RIGHT)
@@ -392,7 +393,7 @@ def muestraCalibracion():
 ####################################################################################################
 
 
-def muestraTemperaturas():
+def muestraTemperaturas(a):
   refrescar()
   ventanaTemperaturas=Toplevel(root)
   ventanaTemperaturas.config(cursor="hand2")
@@ -402,8 +403,8 @@ def muestraTemperaturas():
   campos=Frame(ventanaTemperaturas)
   campos.pack()
 
-  answer = simpledialog.askinteger("Registro temperaturas", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
-
+  #answer = simpledialog.askinteger("Registro temperaturas", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
+  answer=a
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
   micursor.execute("SELECT num_medidas, mal_up, mal_down, media, max, min, fuerarango, factorcorrector, incertidumbre FROM ensayos WHERE Id ="+str(answer))
@@ -422,11 +423,12 @@ def muestraTemperaturas():
 
   def eliminar():
     #elimina datos en BBDD de cada ensayo
-    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
-    if answ is not None:
-          valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el ensayo asociado")
+    #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
+    answ=tree.item(tree.selection())['values'][0])
+    #if answ is not None:
+    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el ensayo asociado")
 
-    if valor=="yes" and answ is not None:
+    if valor=="yes": # and answ is not None:
       miconexion=sqlite3.connect("D:\\tempcontrol.db")
       micursor=miconexion.cursor()
       try:
@@ -445,7 +447,7 @@ def muestraTemperaturas():
 
   botonera=Frame(ventanaTemperaturas)
   botonera.pack()
-  botonparar=Button(botonera, text="Eliminar por Id", command=eliminar)
+  botonparar=Button(botonera, text="Eliminar registros", command=eliminar)
   botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
   def cerrar():
     ventanaTemperaturas.destroy()
@@ -584,7 +586,6 @@ def muestraHistorial():
   tree.delete(*tree.get_children())
  
   for row in datos:
-      #print (row)
       tree.insert('', 'end', values=(row[0],datetime.datetime.strftime(datetime.datetime.strptime(row[1],"%Y-%m-%d"),"%d-%m-%Y"), row[2], row[3], row[4], row[5], row[6]))
 
   micursor.close()
@@ -767,7 +768,7 @@ def ventanacalibracion():
   dia=time.strftime("%d")
   cal=DateEntry(ventanacali,width=12, year=int(ano), month=int(mes),day=int(dia), background='darkblue', foreground='white', borderwidth=2)
   cal.pack(padx=10, pady=10)
-  #cal=StringVar(value=time.strftime("%d/%m/%Y"))
+
   sensor=StringVar(value="SENS1")
   factor150=DoubleVar()
   factorMatSusp=DoubleVar()
@@ -1134,7 +1135,6 @@ def ventanaDatosEnsayo(a):
   campos.pack() 
 
   IdSeleccionada=a
-  #IdSeleccionada = simpledialog.askinteger("Datos del ensayo", "Introduce el numero de Id",  parent=ventanaDatosEnsayo,  minvalue=1, maxvalue=9999)
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
   try:
@@ -1368,8 +1368,7 @@ def ventanaEditarEnsayos(a):
   comentLabel.grid(row=15, column=0, sticky="e", padx=10, pady=10)
   #lee datos en BBDD de cada ensayo
   answer=a
-  #answer = simpledialog.askinteger("Edición Registro...", "Introduce el numero de Id a editar",  parent=ventanaEdEnsayos,  minvalue=1, maxvalue=9999)
-  #if answer is not None:
+
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
   try:
@@ -1468,18 +1467,13 @@ def detenerArduino():
     #ventanaLectura.destroy
 
 def leertemp():
-  #temp_actual=StringVar()
-  #relleno =StringVar("")
   refrescar()
   ventanaLectura=Toplevel(root)
   ventanaLectura.config(cursor="pirate")
   ventanaLectura.geometry("700x500")
   ventanaLectura.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
   ventanaLectura.title("Leyendo datos del sensor...")
-  #temp_actual="00"
-  #termometro=Frame(ventanaLectura)
-  #labeltemp=Label(termometro, text="xx")#textvariable=temp_actual)
-  #labeltemp.grid(row=1, column=0)
+
 
   botonera=Frame(ventanaLectura)
   botonera.pack()
@@ -1523,7 +1517,6 @@ def leertemp():
     conex=sqlite3.connect("D:\\tempcontrol.db")
     cursor1=conex.cursor() 
     #inicio=time.time()  
-    #flag='x'
     tiempo=0
     malas=""
     #factorx=0
@@ -1553,7 +1546,7 @@ def leertemp():
     miId=cursorId.fetchone()
     cursorId.close()
     cursorCalibracion.close()  
-    #messagebox.showinfo(miId)  
+    
     TempMin=float(sTemp)
     TempMin=TempMin+factorx  
     TempMax=float(sTemp)
@@ -1595,7 +1588,7 @@ def leertemp():
         malas="mal"
       tree.insert('', 'end', values=(hora,float(sTemp),float(corregida),float(corregida-tempokDQO),malas ))
       malas=""
-          # labeltemp["text"]=str(sTemp)  
+      
       currentvalue=currentvalue+2
       progress(currentvalue)
       
@@ -1638,96 +1631,22 @@ def tablas():
 
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
-  micursor.execute('''    CREATE TABLE IF NOT EXISTS config (    diascalibracion integer,    rangosup real,    rangoinf real,    factorCobertura real,    intervalomedida integer,    duracionDQO integer,    duracionCN integer,    tempDQO integer,    tempCN integer,   aceptacionDQO real, aceptacionCN real   );''')  
-  micursor.execute('''    CREATE TABLE IF NOT EXISTS ensayos (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    tipo text,    fecha text ,    sensor text,    cubeta integer,    lims1 integer,    lims2 integer,    lims3 integer,    lims4 integer,    lims5 integer,    lims6 integer,    lims7 integer,    lims8 integer,    lims9 integer,    control text,    analista text,    comentario text, num_medidas integer, mal_up integer, mal_down integer, media real, max, real, min real, fuerarango integer, factorcorrector real, incertidumbre real   );''')
-  micursor.execute('''    CREATE TABLE IF NOT EXISTS historial (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operacion text,    operario text,    estado text,    comentario text    );''')
-  micursor.execute('''    CREATE TABLE IF NOT EXISTS calibracion (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operario text,    factorMatSusp real,    factor150 real, uMatSusp real, u150 real,   comentario text    );''')
-  micursor.execute('''    CREATE TABLE IF NOT EXISTS temperaturas (    Id INTEGER,    hora text,     temperatura real     );''')
-  miconexion.commit()
-  messagebox.showinfo("Tablas de ensayos creadas con éxito")  
-  micursor.close()
-  miconexion.close()
-
-###############################################################################################################
-
-def tablas44():
-  miconexion=sqlite3.connect('D:\tempcontrol.db')
-  micursor=miconexion.cursor()
   try:
-    micursor.execute('''
-      CREATE TABLE IF NOT EXISTS config (
-      diascalibracion integer,
-      rangosup real,
-      rangoinf real,
-      factorCobertura real,
-      intervalomedida integer,
-      duracionDQO integer,
-      duracionCN integer,
-      tempDQO integer,
-      tempCN integer,
-      aceptacionDQO real,
-      aceptacionCN real
-
-      );''')  
-    micursor.execute('''
-      CREATE TABLE IF NOT EXISTS ensayos (
-      Id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tipo text,
-      fecha text ,
-      sensor text,
-      cubeta integer,
-      lims1 integer,
-      lims2 integer,
-      lims3 integer,
-      lims4 integer,
-      lims5 integer,
-      lims6 integer,
-      lims7 integer,
-      lims8 integer,
-      lims9 integer,
-      control text,
-      analista text,
-      comentario text,
-      foreign key (Id) references temperaturas(Id)
-      on delete cascade
-      on update cascade
-      );''')
-    micursor.execute('''
-      CREATE TABLE IF NOT EXISTS historial (
-      Id INTEGER PRIMARY KEY AUTOINCREMENT,
-      fecha text,
-      sensor text,
-      operacion text,
-      operario text,
-      estado text,
-      comentario text
-      );''')
-    micursor.execute('''
-      CREATE TABLE IF NOT EXISTS calibracion (
-      Id INTEGER PRIMARY KEY AUTOINCREMENT,
-      fecha text,
-      sensor text,
-      operario text,
-      factorMatSusp real,
-      factor150 real,
-      uMatSusp real,
-      u150 real,
-      comentario text
-      );''')
-    micursor.execute('''
-      CREATE TABLE IF NOT EXISTS temperaturas (
-      Id INTEGER,
-      hora text,
-      tiempo integer,
-      temperatura real 
-      );''')
-
+    micursor.execute('''    CREATE TABLE IF NOT EXISTS config (    diascalibracion integer,    rangosup real,    rangoinf real,    factorCobertura real,    intervalomedida integer,    duracionDQO integer,    duracionCN integer,    tempDQO integer,    tempCN integer,   aceptacionDQO real, aceptacionCN real   );''')  
+    micursor.execute('''    CREATE TABLE IF NOT EXISTS ensayos (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    tipo text,    fecha text ,    sensor text,    cubeta integer,    lims1 integer,    lims2 integer,    lims3 integer,    lims4 integer,    lims5 integer,    lims6 integer,    lims7 integer,    lims8 integer,    lims9 integer,    control text,    analista text,    comentario text, num_medidas integer, mal_up integer, mal_down integer, media real, max, real, min real, fuerarango integer, factorcorrector real, incertidumbre real   );''')
+    micursor.execute('''    CREATE TABLE IF NOT EXISTS historial (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operacion text,    operario text,    estado text,    comentario text    );''')
+    micursor.execute('''    CREATE TABLE IF NOT EXISTS calibracion (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operario text,    factorMatSusp real,    factor150 real, uMatSusp real, u150 real,   comentario text    );''')
+    micursor.execute('''    CREATE TABLE IF NOT EXISTS temperaturas (    Id INTEGER,    hora text,     temperatura real     );''')
+    miconexion.commit()
     messagebox.showinfo("Tablas de ensayos creadas con éxito")  
   except:
     messagebox.showwarning("Atención, Error en creacion de tablas.")
   finally:
     micursor.close()
     miconexion.close()
+
+###############################################################################################################
+
 
 ######################################################################################################
 # interfaz grafica general de la aplicacion
@@ -1782,14 +1701,6 @@ barraMenu.add_cascade(label="Sensores", menu=SensoresMenu)
 barraMenu.add_cascade(label="Archivo", menu=archivoMenu)
 barraMenu.add_cascade(label="Ayuda", menu=ayudaMenu)
 
-
-#pantalla principal, tablas treeview
-
-#style=ttk.style()
-#style.configure("mystyle.Treeview", highlightthickness=0, bd=0, font=(Calibri)',11')
-
-#diascalibrar=Label(text=daysToCalibrate, relief=RIDGE)
-#diascalibrar.grid(row=0, column=0, sticky=N)
 
 imagenh=PhotoImage(file="C:\\Users\\Gorbe\\OneDrive\\Documentos\\digestor.png")
 
