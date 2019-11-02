@@ -192,20 +192,21 @@ def muestraEnsayos():
   def eliminar():
     valor ="not"
     #elimina datos en BBDD de cada ensayo
-    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaEnsayos,  minvalue=1, maxvalue=9999)
-    if answ is not None:
+    IdSeleccionada=tree.item(tree.selection())['values'][0]
+    #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaEnsayos,  minvalue=1, maxvalue=9999)
+    ##if answ is not None:
       
-      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el registro de temperaturas asociado")
-    if valor=="yes" and answ is not None:
+    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el registro de temperaturas asociado")
+    if valor=="yes": # and answ is not None:
       miconexion=sqlite3.connect("D:\\tempcontrol.db")
       micursor=miconexion.cursor() 
       miconexion.commit()
      
       try:
-        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answ))
-        micursor.execute("DELETE FROM ensayos WHERE Id="+str(answ))
+        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(IdSeleccionada))
+        micursor.execute("DELETE FROM ensayos WHERE Id="+str(IdSeleccionada))
         miconexion.commit() 
-        messagebox.showinfo("Atencion","Registro "+str(answ)+"eliminado con exito")       
+        messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito")       
       except:
         messagebox.showerror("Atencion","Error") 
       finally:
@@ -216,7 +217,7 @@ def muestraEnsayos():
 
   botonera=Frame(ventanaEnsayos)
   botonera.pack()
-  botonparar=Button(botonera, text="Eliminar por Id", command=eliminar)
+  botonparar=Button(botonera, text="Eliminar registro", command=eliminar)
   botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
 
   def cierra():
@@ -294,12 +295,10 @@ def muestraEnsayos():
         malas="?"
       else:
         malas=int(row[18])+int(row[19])
-      tree.insert('', 'end', values=(row[0],str(malas),row[1],      datetime.datetime.strftime(datetime.datetime.strptime(row[2],"%Y-%m-%d"),"%d-%m-%Y") , row[3]       , row[4], row[5], row[6],row[7],row[8],row[9],row[10], row[11], row[12], row[13], row[14], row[15],row[16]))
+      tree.insert('', 'end', values=(row[0],str(malas),row[1], datetime.datetime.strftime(datetime.datetime.strptime(row[2],"%Y-%m-%d"),"%d-%m-%Y") , row[3]       , row[4], row[5], row[6],row[7],row[8],row[9],row[10], row[11], row[12], row[13], row[14], row[15],row[16]))
 
   micursor.close()
   miconexion.close()
-
-
 
 #######################################################################################3
 def muestraCalibracion():
@@ -317,18 +316,19 @@ def muestraCalibracion():
   estadoLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
   def eliminarCalibracion():
     #elimina datos en BBDD de cada ensayo
+    IdSeleccionada=tree.item(tree.selection())['values'][0]
     valor="not"
-    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaCali,  minvalue=1, maxvalue=9999)
-    if answ is not None:
-      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
-    if valor=="yes" and answ is not None:
+    #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaCali,  minvalue=1, maxvalue=9999)
+    #if answ is not None:
+    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+    if valor=="yes": #and answ is not None:
       miconexion=sqlite3.connect("D:\\tempcontrol.db")
       micursor=miconexion.cursor()
       try:
-        micursor.execute("DELETE FROM calibracion WHERE Id="+str(answ))
-        messagebox.showinfo("Atencion","Registro "+str(answ)+" eliminado con exito") 
+        micursor.execute("DELETE FROM calibracion WHERE Id="+str(IdSeleccionada))
+        messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito") 
         miconexion.commit()
-
+        ventanaCali.destroy()
       except:
         messagebox.showerror("Atencion","Error") 
       finally:
@@ -339,7 +339,7 @@ def muestraCalibracion():
 
   botonera=Frame(ventanaCali)
   botonera.pack()
-  botonparar=Button(botonera, text="Eliminar por Id", command=eliminarCalibracion)
+  botonparar=Button(botonera, text="Eliminar registro", command=eliminarCalibracion)
   botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
   def cerrar():
     ventanaCali.destroy()
@@ -522,16 +522,18 @@ def muestraHistorial():
   def eliminar():
     #elimina datos en BBDD 
     valor="not"
-    answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaHistorial,  minvalue=1, maxvalue=9999)
-    if answ is not None:
-      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
-    if valor=="yes" and answ is not None:
+    IdSeleccionada=tree.item(tree.selection())['values'][0]
+    #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaHistorial,  minvalue=1, maxvalue=9999)
+    #if answ is not None:
+    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+    if valor=="yes": # and answ is not None:
       miconexion=sqlite3.connect("D:\\tempcontrol.db")
       micursor=miconexion.cursor()
       try:
-        micursor.execute("DELETE FROM historial WHERE Id="+str(answ))
-        messagebox.showinfo("Atencion","Registro "+str(answ)+" eliminado con exito") 
+        micursor.execute("DELETE FROM historial WHERE Id="+str(IdSeleccionada))
+        messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito") 
         miconexion.commit()
+        ventanaHistorial.destroy()
       except:
         messagebox.showerror("Atencion","Error") 
       finally:
@@ -542,7 +544,7 @@ def muestraHistorial():
 
   botonera=Frame(ventanaHistorial)
   botonera.pack()
-  botonparar=Button(botonera, text="Eliminar por Id", command=eliminar)
+  botonparar=Button(botonera, text="Eliminar registro", command=eliminar)
   botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
   def cerrar():
     ventanaHistorial.destroy()
@@ -846,8 +848,6 @@ def ventanacalibracion():
   botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
   botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcampos)
   botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
-  #botonEdit=Button(miFrame2, text="Editar")
-  #botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
   botoncan=Button(miFrame2, text="Cancelar", command=sal)
   botoncan.grid(row=1, column=3, sticky="e", padx=10, pady=10)
   ventanacali.mainloop()
@@ -865,7 +865,6 @@ def ventanaHistory():
   ventanaHistorial.title("Historial del equipo, edición y aporte de información")
   campos=Frame(ventanaHistorial)
   campos.pack()
- 
   #fecha=StringVar(value=time.strftime("%d/%m/%Y"))
   sensor=StringVar(value="SENS1")
   operacion=StringVar()
@@ -875,12 +874,9 @@ def ventanaHistory():
   ano=time.strftime("%Y")
   mes=time.strftime("%m")
   dia=time.strftime("%d")
-
-
   cal=DateEntry(ventanaHistorial,width=12, year=int(ano), month=int(mes),day=int(dia), background='darkblue', foreground='white', borderwidth=2)
   cal.pack(padx=10, pady=10)
   
-
   def limpiarcampos():
     #fecha.set("")
     sensor.set("")
@@ -924,14 +920,12 @@ def ventanaHistory():
   scrollVert.grid(row=4, column=2, sticky="nsew")
   textoComentario.config(yscrollcommand=scrollVert.set)
 
-
   rb1=Radiobutton(campos, text="Apto para el uso",  value="Apto", variable=estado)
   rb1.grid(column=1, row=5)
   rb2=Radiobutton(campos, text="En observación", value="Observacion", variable=estado)
   rb2.grid(column=1,row=6)
   rb3=Radiobutton(campos, text="No apto", value="No apto",variable=estado)
   rb3.grid(column=1,row=7)
-
 
   sensorLabel=Label(campos, text="Sensor:")
   sensorLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
@@ -1127,9 +1121,6 @@ def ventanaEnsayos():
   
   ventanaEnsayos.mainloop()
 
-
-####################################################################################################
-
 ###################################################################################################
 
 
@@ -1258,7 +1249,6 @@ def ventanaDatosEnsayo():
 ####################################################################################################
 
 
-
 def ventanaEditarEnsayos():
   #campos de los ensayos
   
@@ -1310,8 +1300,6 @@ def ventanaEditarEnsayos():
   rb1.grid(column=1, row=0)
   rb2=Radiobutton(campos, text="Mat. susp.", value="Mat", variable=tipoEnsayo)
   rb2.grid(column=2,row=0)
-
-
 
   #cuadroFecha=Entry(campos, textvariable=fechas)
   #cuadroFecha.grid(row=1, column=1, padx=10, pady=10)
@@ -1380,6 +1368,7 @@ def ventanaEditarEnsayos():
   comentLabel=Label(campos, text="Observaciones:")
   comentLabel.grid(row=15, column=0, sticky="e", padx=10, pady=10)
     #lee datos en BBDD de cada ensayo
+  
   answer = simpledialog.askinteger("Edición Registro...", "Introduce el numero de Id a editar",  parent=ventanaEdEnsayos,  minvalue=1, maxvalue=9999)
   if answer is not None:
     miconexion=sqlite3.connect("D:\\tempcontrol.db")
@@ -1421,16 +1410,12 @@ def ventanaEditarEnsayos():
     messagebox.showerror("Atencion","Cancelado")    
     cancela()
 
-
-
   ano=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%Y")
   mes=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%m")
   dia=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%d")
-  #mes=time.strftime("%m")
   #dia=time.strftime("%d")
   cal=DateEntry(ventanaEdEnsayos,width=12, year=int(ano), month=int(mes),day=int(dia), background='darkblue', foreground='white', borderwidth=2)
   cal.pack(padx=10, pady=10)
-
 
 
   def actualizarDatos():
@@ -1841,5 +1826,6 @@ botonConfig.grid(row=4, column=0, sticky="e", padx=10, pady=10)
        # l.grid(row=i+1, column=j+1, sticky=NSEW)
 
 root.mainloop()
+
 
 
