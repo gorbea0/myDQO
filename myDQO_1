@@ -24,7 +24,9 @@ root.title("Control de la temperatura en ensayos de DQO")
 root.geometry("1000x640")
 root.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
 
-global flag
+
+flag="stop"
+
 
 ############################################################################################
 
@@ -74,9 +76,9 @@ def refrescar():
   global toleranciaDQO
   global toleranciaCN
   global estadoSensor
-  global factor80
+  global factorMatSusp
   global factor150
-  global u80
+  global uMatSusp
   global u150
   global fechaUltimaCalibracion
   global miId
@@ -93,7 +95,9 @@ def refrescar():
   try:
     cursorConfig.execute("SELECT * FROM config")
     cursorHistorial.execute("SELECT estado FROM historial WHERE fecha=(SELECT MAX(fecha) FROM historial)")
-    cursorCalibracion.execute("SELECT * FROM calibracion where fecha=(SELECT MAX(fecha) from  (SELECT * from calibracion  WHERE fecha <='"+str(hoy)+"'))") 
+    hoy_c=str(datetime.datetime.strftime(datetime.datetime.strptime(hoy,"%d/%m/%Y"),"%Y-%m-%d"))
+    #hoy_c lo transformo en formato año-mes-dia
+    cursorCalibracion.execute("SELECT * FROM calibracion where fecha=(SELECT MAX(fecha) from  (SELECT * from calibracion  WHERE fecha <='"+str(hoy_c)+"'))") 
     cursorUltimaCaliFecha.execute("SELECT MAX(fecha) from calibracion")
     cursorEnsayos.execute("SELECT Id FROM ensayos WHERE Id=(SELECT MAX(Id) FROM ensayos) order by Id")
     conexion.commit()
@@ -118,8 +122,8 @@ def refrescar():
     CalibracionActual=cursorCalibracion.fetchall()
     for factor in CalibracionActual:
       factor150=factor[5]
-      factor80=factor[4]
-      u80=factor[6]
+      factorMatSusp=factor[4]
+      uMatSusp=factor[6]
       u150=factor[7]
       
     FechaUlCal=cursorUltimaCaliFecha.fetchall()
@@ -148,6 +152,17 @@ def certificado():
   #os.popen('a.pdf')
   promp=os.system('start SumatraPDF D:FichaSensorDQO.pdf')
 
+def digestor():
+  #os.popen('a.pdf')
+  promp=os.system('start SumatraPDF D:hach.pdf')
+
+
+def pnt():
+  #os.popen('a.pdf')
+  promp=os.system('start SumatraPDF D:pntdqo.pdf')
+
+
+
 ####################################################################################################  
 
 refrescar()
@@ -158,19 +173,19 @@ def muestraEnsayos():
   refrescar()
   ventanaEnsayos=Toplevel(root)
   ventanaEnsayos.config(cursor="hand2")
-  ventanaEnsayos.geometry("900x700")
+  ventanaEnsayos.geometry("850x400")
   ventanaEnsayos.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
   ventanaEnsayos.title("Listado de ensayos")
 
   campos=Frame(ventanaEnsayos)
   campos.pack()
 
-  tipoLabel=Label(campos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion)) #
+  tipoLabel=Label(campos, text="Fecha de la última calibración: "+datetime.datetime.strftime(datetime.datetime.strptime(fechaUltimaCalibracion,"%Y-%m-%d"),"%d-%m-%Y"))
   tipoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
   estadoLabel=Label(campos, text="Estado del sensor actualmente "+estadoSensor)
   estadoLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
 
-  f150Label=Label(campos, text="Factor corrector DQO: "+str(factor150))
+  f150Label=Label(campos, text="Factor corrector DQO a fecha de hoy: "+str(factor150))
   f150Label.grid(row=2, column=0, sticky="e", padx=10, pady=5)
   
 
@@ -190,7 +205,7 @@ def muestraEnsayos():
         micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answ))
         micursor.execute("DELETE FROM ensayos WHERE Id="+str(answ))
         miconexion.commit() 
-        messagebox.showinfo("Atencion","Registro"+str(answ)+"eliminado con exito")       
+        messagebox.showinfo("Atencion","Registro "+str(answ)+"eliminado con exito")       
       except:
         messagebox.showerror("Atencion","Error") 
       finally:
@@ -279,7 +294,7 @@ def muestraEnsayos():
         malas="?"
       else:
         malas=int(row[18])+int(row[19])
-      tree.insert('', 'end', values=(row[0],str(malas),row[1], row[2], row[3], row[4], row[5], row[6],row[7],row[8],row[9],row[10], row[11], row[12], row[13], row[14], row[15],row[16]))
+      tree.insert('', 'end', values=(row[0],str(malas),row[1],      datetime.datetime.strftime(datetime.datetime.strptime(row[2],"%Y-%m-%d"),"%d-%m-%Y") , row[3]       , row[4], row[5], row[6],row[7],row[8],row[9],row[10], row[11], row[12], row[13], row[14], row[15],row[16]))
 
   micursor.close()
   miconexion.close()
@@ -291,12 +306,12 @@ def muestraCalibracion():
   refrescar()
   ventanaCali=Toplevel(root)
   ventanaCali.config(cursor="hand2")
-  ventanaCali.geometry("780x400")
+  ventanaCali.geometry("1150x400")
   ventanaCali.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
   ventanaCali.title("Registro de calibraciones de sensores de DQO")
   campos=Frame(ventanaCali)
   campos.pack()
-  tipoLabel=Label(campos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion)) #
+  tipoLabel=Label(campos, text="Fecha de la última calibración: "+datetime.datetime.strftime(datetime.datetime.strptime(fechaUltimaCalibracion,"%Y-%m-%d"),"%d-%m-%Y"))
   tipoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
   estadoLabel=Label(campos, text="Estado del sensor actualmente "+estadoSensor)
   estadoLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
@@ -311,7 +326,7 @@ def muestraCalibracion():
       micursor=miconexion.cursor()
       try:
         micursor.execute("DELETE FROM calibracion WHERE Id="+str(answ))
-        messagebox.showinfo("Atencion","Registro"+str(answ)+" eliminado con exito") 
+        messagebox.showinfo("Atencion","Registro "+str(answ)+" eliminado con exito") 
         miconexion.commit()
 
       except:
@@ -334,7 +349,7 @@ def muestraCalibracion():
   Right.pack(side=RIGHT)
   scrollbary = Scrollbar(Right, orient=VERTICAL)
   scrollbarx = Scrollbar(Right, orient=HORIZONTAL)
-  tree = ttk.Treeview(Right, columns=("Id", "fecha", "sensor", "realizado por", "factor 80", "factor 150","u80","u150","observaciones"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  tree = ttk.Treeview(Right, columns=("Id", "fecha", "sensor", "realizado por", "factor 80", "factor 150","uMatSusp","u150","observaciones"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
   scrollbary.config(command=tree.yview)
   scrollbary.pack(side=RIGHT, fill=Y)
   scrollbarx.config(command=tree.xview)
@@ -345,7 +360,7 @@ def muestraCalibracion():
   tree.heading('realizado por', text="realizado por", anchor=W)
   tree.heading('factor 80', text="factor 80", anchor=W)
   tree.heading('factor 150', text="factor 150", anchor=W)
-  tree.heading('u80', text="Incert exp 80", anchor=W)
+  tree.heading('uMatSusp', text="Incert exp 80", anchor=W)
   tree.heading('u150', text="Incert exp 150", anchor=W)
   tree.heading('observaciones', text="observaciones", anchor=W)
   tree.column('#0', stretch=NO, minwidth=0, width=10)
@@ -369,7 +384,7 @@ def muestraCalibracion():
 
   for row in datos:
       #print (row)
-      tree.insert('', 'end', values=(row[0],row[1], row[2], row[3], row[4], row[5], row[6],row[7],row[8]))
+      tree.insert('', 'end', values=(  row[0],  datetime.datetime.strftime(datetime.datetime.strptime(row[1],"%Y-%m-%d"),"%d-%m-%Y")  , row[2], row[3], row[4], row[5], row[6],row[7],row[8]))
 
   micursor.close()
   miconexion.close()
@@ -382,7 +397,7 @@ def muestraTemperaturas():
   refrescar()
   ventanaTemperaturas=Toplevel(root)
   ventanaTemperaturas.config(cursor="hand2")
-  ventanaTemperaturas.geometry("800x400")
+  ventanaTemperaturas.geometry("700x900")
   ventanaTemperaturas.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
   ventanaTemperaturas.title("Temperaturas registradas en el ensayo")
   campos=Frame(ventanaTemperaturas)
@@ -392,7 +407,7 @@ def muestraTemperaturas():
 
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
-  micursor.execute("SELECT num_medidas, mal_up, mal_down, media, max, min FROM ensayos WHERE Id ="+str(answer))
+  micursor.execute("SELECT num_medidas, mal_up, mal_down, media, max, min, fuerarango, factorcorrector, incertidumbre FROM ensayos WHERE Id ="+str(answer))
   miconexion.commit()
   datos= micursor.fetchall()
   for row in datos:
@@ -402,6 +417,9 @@ def muestraTemperaturas():
     media=row[3]
     maxi=row[4]
     mini=row[5]
+    fuera=row[6]
+    factor=row[7]
+    incert=row[8]
 
   def eliminar():
     #elimina datos en BBDD de cada ensayo
@@ -435,16 +453,16 @@ def muestraTemperaturas():
   botoncerrar=Button(botonera, text="Cerrar", command=cerrar)
   botoncerrar.grid(row=1, column=3, sticky="e", padx=10, pady=10) 
 
-  tipoLabel=Label(campos, text="Número medidas: "+str(num_medidas)+ " / Media: "+str(media)+" / minimo: "+str(mini)+" / Máximo: "+str(maxi))
+  tipoLabel=Label(campos, text="Número medidas: "+str(num_medidas)+ " / Media: "+str(media)+" / minimo: "+str(mini)+" / Máximo: "+str(maxi)+" /factor corr: "+str(factor)+" / Incert: "+str(incert))
   tipoLabel.grid(row=1, column=1, sticky="e", padx=10, pady=5)
-  estadoLabel=Label(campos, text="Valores no conformes por arriba: "+str(mal_up)+" / Valores no conformes por abajo: "+str(mal_down))
+  estadoLabel=Label(campos, text="Valores no conformes por arriba: "+str(mal_up)+" / Valores no conformes por abajo: "+str(mal_down)+" / Valores fuera de rango del termómetro: "+str(fuera) )
   estadoLabel.grid(row=2, column=1, sticky="e", padx=10, pady=5)
 
   Right = Frame(ventanaTemperaturas, width=600, height=500, bd=8, relief="raise")
   Right.pack(side=RIGHT)
   scrollbary = Scrollbar(Right, orient=VERTICAL)
   scrollbarx = Scrollbar(Right, orient=HORIZONTAL)
-  tree = ttk.Treeview(Right, columns=("Id", "hora",  "temperatura","temp_corregida"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  tree = ttk.Treeview(Right, columns=("Id", "hora",  "temperatura","temp_corregida", "margen","mal"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
   scrollbary.config(command=tree.yview)
   scrollbary.pack(side=RIGHT, fill=Y)
   scrollbarx.config(command=tree.xview)
@@ -454,22 +472,27 @@ def muestraTemperaturas():
  
   tree.heading('temperatura', text="temperatura", anchor=W)
   tree.heading('temp_corregida', text="temp_corregida", anchor=W)
-  
+  tree.heading('mal', text="mal", anchor=W)
+  tree.heading('margen', text="margen", anchor=W)
   tree.column('#0', stretch=NO, minwidth=0, width=0)
   tree.column('#1', stretch=NO, minwidth=0, width=40)
   tree.column('#2', stretch=NO, minwidth=0, width=80)
   tree.column('#3', stretch=NO, minwidth=0, width=80) 
+  tree.column('#4', stretch=NO, minwidth=0, width=80) 
+  tree.column('#5', stretch=NO, minwidth=0, width=80) 
   tree.pack()
 
   micursor.execute("SELECT * from temperaturas WHERE Id="+str(answer))
   datos=micursor.fetchall()
   tree.delete(*tree.get_children())
-
   
+  malas=""
   for row in datos:
       #print (row)
-      tree.insert('', 'end', values=(row[0],row[1], row[2],row[3]))   #modificar el factor corrector!!!!!
-
+      if abs(row[3]-tempokDQO) > toleranciaDQO:
+        malas="x"
+      tree.insert('', 'end', values=(row[0],row[1], row[2],row[3],row[3]-tempokDQO,malas) ) #modificar el factor corrector y las malas!!!!!
+      malas=""
   micursor.close()
   miconexion.close()
 
@@ -488,7 +511,10 @@ def muestraHistorial():
   campos=Frame(ventanaHistorial)
   campos.pack()
 
-  tipoLabel=Label(campos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion))
+  #tipoLabel=Label(campos, text="Fecha de la última calibración: "+str(fechaUltimaCalibracion))
+  tipoLabel=Label(campos, text="Fecha de la última calibración: "+datetime.datetime.strftime(datetime.datetime.strptime(fechaUltimaCalibracion,"%Y-%m-%d"),"%d-%m-%Y"))
+
+  
   tipoLabel.grid(row=1, column=1, sticky="e", padx=10, pady=5)
   estadoLabel=Label(campos, text="Estado del sensor actualmente "+estadoSensor)
   estadoLabel.grid(row=2, column=1, sticky="e", padx=10, pady=5)
@@ -557,7 +583,7 @@ def muestraHistorial():
   tree.delete(*tree.get_children())
  
   for row in datos:
-      print (row)
+      #print (row)
       tree.insert('', 'end', values=(row[0],datetime.datetime.strftime(datetime.datetime.strptime(row[1],"%Y-%m-%d"),"%d-%m-%Y"), row[2], row[3], row[4], row[5], row[6]))
 
   micursor.close()
@@ -596,7 +622,7 @@ def ventanaEstadoSensor():
   hoyLabel=Label(campos,  text="Hoy: "+str(hoy))
   hoyLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)  
 
-  tipoLabel=Label(campos,  text="Fecha de la última calibración: "+str(fechaUltimaCalibracion))
+  tipoLabel=Label(campos,  text="Fecha de la última calibración: "+datetime.datetime.strftime(datetime.datetime.strptime(fechaUltimaCalibracion,"%Y-%m-%d"),"%d-%m-%Y"))
   tipoLabel.grid(row=2, column=0, sticky="e", padx=10, pady=5)
   ahora = datetime.datetime.utcnow()
 
@@ -608,14 +634,14 @@ def ventanaEstadoSensor():
   proximLabel=Label(campos,  text="Próxima calibración el: "+str(prox.strftime("%d/%m/%Y"))+" / Faltan "+str(faltan.days)+" días")
   proximLabel.grid(row=3, column=0, sticky="e", padx=10, pady=5)
   
-  factor80Label=Label(campos, text="Factor corrector de Cianuros:  "+str(factor80)+"ºC")
-  factor80Label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
+  factorMatsuspLabel=Label(campos, text="Factor corrector de Mat suspensión:  "+str(factorMatSusp)+"ºC")
+  factorMatsuspLabel.grid(row=4, column=0, sticky="e", padx=10, pady=5)
   factor150Label=Label(campos, text="Factor corrector de DQO:  "+str(factor150)+"ºC")
   factor150Label.grid(row=5, column=0, sticky="e", padx=10, pady=5)
 
-  u80Label=Label(campos, text="Incertidumbre expandida CN:  "+str(u80)+"ºC")
-  u80Label.grid(row=6, column=0, sticky="e", padx=10, pady=5)
-  u150Label=Label(campos, text="Incertidumbre expandida DQO:  "+str(u150)+"ºC")
+  uMatSuspLabel=Label(campos, text="Incertidumbre expandida a 105º Mat susp:  "+str(uMatSusp)+"ºC")
+  uMatSuspLabel.grid(row=6, column=0, sticky="e", padx=10, pady=5)
+  u150Label=Label(campos, text="Incertidumbre expandida a 150º DQO:  "+str(u150)+"ºC")
   u150Label.grid(row=7, column=0, sticky="e", padx=10, pady=5)
 
   
@@ -707,11 +733,11 @@ def ventanaConfig():
   tempokDQOLabel.grid(row=6, column=0, sticky="e", padx=10, pady=10)
   toleranceDQOLabel=Label(campos, text="Tolerancia Aceptación DQO ºC:")
   toleranceDQOLabel.grid(row=7, column=0, sticky="e", padx=10, pady=10)
-  tiempomedidaCNLabel=Label(campos, text="Duración ensayo cianuro en minutos:")
+  tiempomedidaCNLabel=Label(campos, text="Duración ensayo Mat. suspensión en minutos:")
   tiempomedidaCNLabel.grid(row=8, column=0, sticky="e", padx=10, pady=10)
-  tempokCNLabel=Label(campos, text="Temperatura correcta Cianuro ºC:")
+  tempokCNLabel=Label(campos, text="Temperatura correcta mat. suspensión ºC:")
   tempokCNLabel.grid(row=9, column=0, sticky="e", padx=10, pady=10)
-  toleranceCNLabel=Label(campos, text="Tolerancia Aceptación CN ºC:")
+  toleranceCNLabel=Label(campos, text="Tolerancia Aceptación Mat. suspensión ºC:")
   toleranceCNLabel.grid(row=10, column=0, sticky="e", padx=10, pady=10)
 
   miFrame2=Frame(ventanaConfig)
@@ -735,7 +761,6 @@ def ventanacalibracion():
   campos=Frame(ventanacali)
   campos.pack()
 
- #kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
   ano=time.strftime("%Y")
   mes=time.strftime("%m")
   dia=time.strftime("%d")
@@ -744,16 +769,16 @@ def ventanacalibracion():
   #cal=StringVar(value=time.strftime("%d/%m/%Y"))
   sensor=StringVar(value="SENS1")
   factor150=DoubleVar()
-  factor80=DoubleVar()
+  factorMatSusp=DoubleVar()
   operario=StringVar()
-  u80=StringVar()
+  uMatSusp=StringVar()
   u150=StringVar()
 
   def limpiarcampos():
       #cal.set("")
       sensor.set("")
       factor150.set("")
-      factor80.set("")
+      factorMatSusp.set("")
       operario.set("")
       textoComentario.delete(1.0,END)
 
@@ -761,7 +786,7 @@ def ventanacalibracion():
     #inserta datos  en BBDD 
     miconexion=sqlite3.connect("D:\\tempcontrol.db")
     micursor=miconexion.cursor()
-    datos=cal.get_date(),sensor.get(),factor150.get(),factor80.get(),operario.get(),u80.get(),u150.get(),textoComentario.get("1.0",END) 
+    datos=cal.get_date(),sensor.get(),  operario.get(),  factorMatSusp.get(),  factor150.get(),uMatSusp.get(),u150.get(),textoComentario.get("1.0",END) 
     try:
       micursor.execute("INSERT INTO calibracion VALUES(NULL,?,?,?,?,?,?,?,?)",(datos))
       miconexion.commit()
@@ -779,27 +804,26 @@ def ventanacalibracion():
   cuadrosensor.grid(row=1, column=1, padx=10, pady=10)
   cuadrofactor150=Entry(campos, textvariable=factor150)
   cuadrofactor150.grid(row=2, column=1, padx=10, pady=10)
-  cuadrofactor80=Entry(campos, textvariable=factor80)
-  cuadrofactor80.grid(row=3, column=1, padx=10, pady=10)
+  cuadrofactorMatsusp=Entry(campos, textvariable=factorMatSusp)
+  cuadrofactorMatsusp.grid(row=3, column=1, padx=10, pady=10)
   cuadrooperario=Entry(campos, textvariable=operario)
   cuadrooperario.grid(row=4, column=1, padx=10, pady=10)
-  cuadrou80=Entry(campos, textvariable=u80)
-  cuadrou80.grid(row=5, column=1, padx=10, pady=10)
+  cuadrouMatSusp=Entry(campos, textvariable=uMatSusp)
+  cuadrouMatSusp.grid(row=5, column=1, padx=10, pady=10)
   cuadrou150=Entry(campos, textvariable=u150)
   cuadrou150.grid(row=6, column=1, padx=10, pady=10)
-  #labels
   #fechaLabel=Label(campos, text="Fecha:")
   #fechaLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
   sensorLabel=Label(campos, text="Sensor:")
   sensorLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
-  factor150Label=Label(campos, text="Factor a 150ºC:")
+  factor150Label=Label(campos, text="Factor DQO a 150ºC:")
   factor150Label.grid(row=2, column=0, sticky="e", padx=10, pady=5)
-  factor80Label=Label(campos, text="Factor a 80ºC:")
-  factor80Label.grid(row=3, column=0, sticky="e", padx=10, pady=10)
+  factorMatsuspLabel=Label(campos, text="Factor Mat susp. a 105ºC:")
+  factorMatsuspLabel.grid(row=3, column=0, sticky="e", padx=10, pady=10)
   operarioLabel=Label(campos, text="Realizado por:")
   operarioLabel.grid(row=4, column=0, sticky="e", padx=10, pady=10)
-  u80Label=Label(campos, text="Incert exp CN:")
-  u80Label.grid(row=5, column=0, sticky="e", padx=10, pady=10)
+  uMatSuspLabel=Label(campos, text="Incert exp Materias susp.:")
+  uMatSuspLabel.grid(row=5, column=0, sticky="e", padx=10, pady=10)
   u150Label=Label(campos, text="Incert exp DQO:")
   u150Label.grid(row=6, column=0, sticky="e", padx=10, pady=10)
   comentarioLabel=Label(campos, text="Observaciones:")
@@ -810,6 +834,9 @@ def ventanacalibracion():
   scrollVert.grid(row=7, column=2, sticky="nsew")
   textoComentario.config(yscrollcommand=scrollVert.set)
 
+  fechalabel=Label(campos, text="Fecha:")
+  fechalabel.grid(row=9, column=0, sticky="e", padx=10, pady=10)  
+
   def sal():
     ventanacali.destroy()
 
@@ -817,8 +844,6 @@ def ventanacalibracion():
   miFrame2.pack()
   botonNuevo=Button(miFrame2, text="Insertar nueva calibración", command=insertar)
   botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
-  #botonDelet=Button(miFrame2, text="Eliminar calibración", command=eliminarCalibracion)
-  #botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
   botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcampos)
   botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
   #botonEdit=Button(miFrame2, text="Editar")
@@ -850,8 +875,12 @@ def ventanaHistory():
   ano=time.strftime("%Y")
   mes=time.strftime("%m")
   dia=time.strftime("%d")
+
+
   cal=DateEntry(ventanaHistorial,width=12, year=int(ano), month=int(mes),day=int(dia), background='darkblue', foreground='white', borderwidth=2)
   cal.pack(padx=10, pady=10)
+  
+
   def limpiarcampos():
     #fecha.set("")
     sensor.set("")
@@ -885,22 +914,25 @@ def ventanaHistory():
   cuadrooperario=Entry(campos, textvariable=operario)
   cuadrooperario.grid(row=3, column=1, padx=10, pady=10)
   estado.set("Apto")
+
   #cuadroEstado=Entry(campos, textvariable=estado)
   #cuadroEstado.grid(row=4, column=1, padx=10, pady=10)
-  rb1=Radiobutton(campos, text="Apto para el uso",  value="Apto", variable=estado)
-  rb1.grid(column=1, row=4)
-  rb2=Radiobutton(campos, text="En observación", value="Observacion", variable=estado)
-  rb2.grid(column=2,row=4)
-  rb3=Radiobutton(campos, text="No apto", value="No apto",variable=estado)
-  rb3.grid(column=3,row=4)
+
   textoComentario=Text(campos, width=16, height=4)
-  textoComentario.grid(row=5, column=1, padx=10, pady=10)
+  textoComentario.grid(row=4, column=1, padx=10, pady=10)
   scrollVert=Scrollbar(campos, command=textoComentario.yview)
-  scrollVert.grid(row=5, column=2, sticky="nsew")
+  scrollVert.grid(row=4, column=2, sticky="nsew")
   textoComentario.config(yscrollcommand=scrollVert.set)
-  #labels
-  #fechaLabel=Label(campos, text="Fecha:")
-  #fechaLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
+
+
+  rb1=Radiobutton(campos, text="Apto para el uso",  value="Apto", variable=estado)
+  rb1.grid(column=1, row=5)
+  rb2=Radiobutton(campos, text="En observación", value="Observacion", variable=estado)
+  rb2.grid(column=1,row=6)
+  rb3=Radiobutton(campos, text="No apto", value="No apto",variable=estado)
+  rb3.grid(column=1,row=7)
+
+
   sensorLabel=Label(campos, text="Sensor:")
   sensorLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
   operacionLabel=Label(campos, text="Operación:")
@@ -908,9 +940,12 @@ def ventanaHistory():
   operarioLabel=Label(campos, text="Realizado por:")
   operarioLabel.grid(row=3, column=0, sticky="e", padx=10, pady=10)
   comentarioLabel=Label(campos, text="Observaciones:")
-  comentarioLabel.grid(row=5, column=0, sticky="e", padx=10, pady=10)
+  comentarioLabel.grid(row=4, column=0, sticky="e", padx=10, pady=10)
   estadoLabel=Label(campos, text="Estado del sensor:")
-  estadoLabel.grid(row=4, column=0, sticky="e", padx=10, pady=10)  
+  estadoLabel.grid(row=5, column=0, sticky="e", padx=10, pady=10) 
+  fechalabel=Label(campos, text="Fecha:")
+  fechalabel.grid(row=7, column=0, sticky="e", padx=10, pady=10)  
+
    #botones en el grid de abajo
 
   def cancela():
@@ -924,8 +959,6 @@ def ventanaHistory():
   #botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
   botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcampos)
   botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
-  #botonEdit=Button(miFrame2, text="Editar ensayo")
-  #botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
   botonCan=Button(miFrame2, text="Cancelar", command=cancela)
   botonCan.grid(row=1, column=3, sticky="e", padx=10, pady=10)
 
@@ -963,7 +996,7 @@ def ventanaEnsayos():
 
   rb1=Radiobutton(campos, text="DQO",  value="DQO", variable=tipoEnsayo)
   rb1.grid(column=1, row=0)
-  rb2=Radiobutton(campos, text="CN", value="CN", variable=tipoEnsayo)
+  rb2=Radiobutton(campos, text="Mat. susp.", value="Mat", variable=tipoEnsayo)
   rb2.grid(column=2,row=0)
 
   ano=time.strftime("%Y")
@@ -971,10 +1004,7 @@ def ventanaEnsayos():
   dia=time.strftime("%d")
   cal=DateEntry(ventanaEnsayos,width=12, year=int(ano), month=int(mes),day=int(dia), background='darkblue', foreground='white', borderwidth=2)
   cal.pack(padx=10, pady=10)
-  #cuadroFecha=Entry(campos, textvariable=fecha)
-  #cuadroFecha.grid(row=1, column=1, padx=10, pady=10)
-  #cuadroCubeta=Entry(campos, textvariable=cubeta, width=2)
-  #cuadroCubeta.grid(row=2, column=1, padx=10, pady=10)
+
   spin=Spinbox(campos, from_=0, to=9, width=1, textvariable=cubeta)
   spin.grid(row=2, column=1)
   cuadrosensor=Entry(campos, textvariable=sensor)
@@ -997,7 +1027,6 @@ def ventanaEnsayos():
   cuadrolims8.grid(row=11, column=1, padx=10, pady=10)
   cuadrolims9=Entry(campos, textvariable=lims9)  
   cuadrolims9.grid(row=12, column=1, padx=10, pady=10)
-
   cuadroctrl=Entry(campos, textvariable=control)  
   cuadroctrl.grid(row=13, column=1, padx=10, pady=10)
   cuadroanalista=Entry(campos, textvariable=analista)  
@@ -1070,7 +1099,7 @@ def ventanaEnsayos():
     micursor=miconexion.cursor()
     datos=tipoEnsayo.get(),cal.get_date(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END) 
     try:
-      micursor.execute("INSERT INTO ensayos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL,NULL,NULL,NULL,NULL)",(datos))
+      micursor.execute("INSERT INTO ensayos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)",(datos))
       miconexion.commit()
       messagebox.showinfo("Atencion","Registro creado con éxito ")
     except:
@@ -1104,37 +1133,15 @@ def ventanaEnsayos():
 ###################################################################################################
 
 
-
-
-
-######################################################################################################
-# KJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJKJ
-
 def ventanaDatosEnsayo():
   #campos de los ensayos
   ventanaDatosEnsayo=Toplevel(root)
   ventanaDatosEnsayo.config(cursor="hand2")
-  ventanaDatosEnsayo.geometry("630x900")
+  ventanaDatosEnsayo.geometry("630x850")
   ventanaDatosEnsayo.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
   ventanaDatosEnsayo.title("Datos del Ensayos")
   campos=Frame(ventanaDatosEnsayo)
-  campos.pack()
-  
-  #fecha=StringVar(value=time.strftime("%d/%m/%Y"))
-  #sensor=StringVar()
-  #cubeta=IntVar()
-  #tipoEnsayo=StringVar()
-  #lims1=IntVar()
-  #lims2=IntVar()
-  #lims3=IntVar()
-  #lims4=IntVar()
-  #lims5=IntVar()
-  #lims6=IntVar()
-  #lims7=IntVar()
-  #lims8=IntVar()
-  #lims9=IntVar()
-  #analista=StringVar()
-  #control=StringVar()
+  campos.pack() 
 
   miId = simpledialog.askinteger("Datos del ensayo", "Introduce el numero de Id",  parent=ventanaDatosEnsayo,  minvalue=1, maxvalue=9999)
   # validar el miId !!!
@@ -1144,8 +1151,7 @@ def ventanaDatosEnsayo():
     micursor.execute("SELECT * FROM ensayos WHERE Id="+str(miId))
     miconexion.commit()
     datos= micursor.fetchall()
-    for row in datos:
-      
+    for row in datos:  
       tipoensayo=row[1]
       fecha=row[2]
       sensor=row[3]
@@ -1169,7 +1175,8 @@ def ventanaDatosEnsayo():
       max=row[21]
       min=row[22]
       fuerarango=row[23]
-
+      factor=row[24]
+      incert=row[25]
   except:
     messagebox.showerror("Error","error de base de datos")  
   finally:
@@ -1209,11 +1216,10 @@ def ventanaDatosEnsayo():
   analistaLabel.grid(row=14, column=0, sticky="e", padx=10, pady=10)
   comentLabel=Label(campos, text="Observaciones: "+str(textoComentario))
   comentLabel.grid(row=15, column=0, sticky="e", padx=10, pady=10)
-
   
   IdLabel=Label(campos, text="Id: "+str(miId))
   IdLabel.grid(row=1, column=1, sticky="e", padx=10, pady=10)
-  fechaLabel=Label(campos, text="fecha: "+str(fecha))
+  fechaLabel=Label(campos, text="fecha: "+datetime.datetime.strftime(datetime.datetime.strptime(fecha,"%Y-%m-%d"),"%d-%m-%Y"))
   fechaLabel.grid(row=2, column=1, sticky="e", padx=10, pady=10)
   mediaLabel=Label(campos, text="media: "+str(media))
   mediaLabel.grid(row=3, column=1, sticky="e", padx=10, pady=10)
@@ -1231,6 +1237,10 @@ def ventanaDatosEnsayo():
   malupLabel.grid(row=8, column=1, sticky="e", padx=10, pady=10)
   maldownLabel=Label(campos, text="valores mal por abajo: "+str(mal_down))
   maldownLabel.grid(row=9, column=1, sticky="e", padx=10, pady=10)
+  factorLabel=Label(campos, text="Factor corrector: "+str(factor))
+  factorLabel.grid(row=10, column=1, sticky="e", padx=10, pady=10)
+  incerLabel=Label(campos, text="Incertidumbre: "+str(incert))
+  incerLabel.grid(row=11, column=1, sticky="e", padx=10, pady=10)
 
 
   #botones en el grid de abajo
@@ -1239,12 +1249,6 @@ def ventanaDatosEnsayo():
 
   miFrame2=Frame(ventanaDatosEnsayo)
   miFrame2.pack()
-  #botonNuevo=Button(miFrame2, text="Insertar datos y comenzar el ensayo", command=insertarEnsayo)
-  #botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
-  #botonDelet=Button(miFrame2, text="Eliminar ensayo", command=eliminarEnsayo)
-  #botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
-  #botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcamposEnsayo)
-  #botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
   botonEdit=Button(miFrame2, text="Cerrar", command=cancela)
   botonEdit.grid(row=1, column=3, sticky="e", padx=10, pady=10)
   
@@ -1255,22 +1259,11 @@ def ventanaDatosEnsayo():
 
 
 
-
-
-
-
-
-
-
-
-######################################################################################################
-
-
 def ventanaEditarEnsayos():
   #campos de los ensayos
   
   def limpiarcamposEnsayo():
-    fechas.set("")
+    #fechas.set("")
     sensor.set("")
     cubeta.set("")
     tipoEnsayo.set("DQO")
@@ -1297,7 +1290,7 @@ def ventanaEditarEnsayos():
   ventanaEdEnsayos.title("Edición de ensayos")
   campos=Frame(ventanaEdEnsayos)
   campos.pack()
-  fechas=StringVar(value=time.strftime("%d/%m/%Y"))
+  #fechas=StringVar(value=time.strftime("%d/%m/%Y"))
   sensor=StringVar(value="SENS1")
   cubeta=IntVar()
   tipoEnsayo=StringVar(value="DQO")
@@ -1315,10 +1308,13 @@ def ventanaEditarEnsayos():
   #ident=StringVar()
   rb1=Radiobutton(campos, text="DQO",  value="DQO", variable=tipoEnsayo)
   rb1.grid(column=1, row=0)
-  rb2=Radiobutton(campos, text="CN", value="CN", variable=tipoEnsayo)
+  rb2=Radiobutton(campos, text="Mat. susp.", value="Mat", variable=tipoEnsayo)
   rb2.grid(column=2,row=0)
-  cuadroFecha=Entry(campos, textvariable=fechas)
-  cuadroFecha.grid(row=1, column=1, padx=10, pady=10)
+
+
+
+  #cuadroFecha=Entry(campos, textvariable=fechas)
+  #cuadroFecha.grid(row=1, column=1, padx=10, pady=10)
   spin=Spinbox(campos, from_=0, to=9, width=1, textvariable=cubeta)
   spin.grid(row=2, column=1)
   cuadrosensor=Entry(campos, textvariable=sensor)
@@ -1353,8 +1349,8 @@ def ventanaEditarEnsayos():
   # labels de los cuadros
   tipoLabel=Label(campos, text="Tipo ensayo:")
   tipoLabel.grid(row=0, column=0, sticky="e", padx=10, pady=5)
-  fechaLabel=Label(campos, text="Fecha:")
-  fechaLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+  #fechaLabel=Label(campos, text="Fecha:")
+  #fechaLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
   cubetaLabel=Label(campos, text="Cubeta sensor:")
   cubetaLabel.grid(row=2, column=0, sticky="e", padx=10, pady=10)
   sensorLabel=Label(campos, text="Sensor:")
@@ -1392,17 +1388,16 @@ def ventanaEditarEnsayos():
       micursor.execute("SELECT * FROM ensayos WHERE Id="+str(answer))
       miconexion.commit()
       a=micursor.fetchall()
-      print (a)
+      #print (a)
     #  print (a.rowcount)
      # messagebox.showinfo(a.rowcount)
       #if a.rowcount<1:
         #messagebox.showerror("Aviso","¡No existe el Id"+str(answer))
         #ventanaEdEnsayos.destroy()
-      
   
       for dato in a:    
         tipoEnsayo.set(dato[1])
-        fechas.set(dato[2])
+        fechas=dato[2]
         sensor.set(dato[3])
         cubeta.set(dato[4])
         lims1.set(dato[5])
@@ -1426,11 +1421,23 @@ def ventanaEditarEnsayos():
     messagebox.showerror("Atencion","Cancelado")    
     cancela()
 
+
+
+  ano=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%Y")
+  mes=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%m")
+  dia=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%d")
+  #mes=time.strftime("%m")
+  #dia=time.strftime("%d")
+  cal=DateEntry(ventanaEdEnsayos,width=12, year=int(ano), month=int(mes),day=int(dia), background='darkblue', foreground='white', borderwidth=2)
+  cal.pack(padx=10, pady=10)
+
+
+
   def actualizarDatos():
     #inserta datos en BBDD de cada ensayo
     miconexion=sqlite3.connect("D:\\tempcontrol.db")
     micursor=miconexion.cursor()
-    datos=tipoEnsayo.get(),fechas.get(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END) 
+    datos=tipoEnsayo.get(),cal.get_date(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END) 
     try:
       micursor.execute("UPDATE ensayos SET tipo=?, fecha=?, sensor=?, cubeta=?, lims1=?, lims2=?, lims3=?, lims4=?, lims5=?, lims6=?, lims7=?, lims8=?, lims9=?, control=?, analista=?, comentario=? "+ " WHERE Id="+str(answer),(datos))
       miconexion.commit()
@@ -1445,8 +1452,7 @@ def ventanaEditarEnsayos():
   miFrame2.pack()
   botonNuevo=Button(miFrame2, text="Confirmar actualización de Id "+str(answer), command=actualizarDatos)
   botonNuevo.grid(row=1, column=0, sticky="e", padx=10, pady=10)
-  #botonDelet=Button(miFrame2, text="Eliminar ensayo", command=eliminarEnsayo)
-  #botonDelet.grid(row=1, column=1, sticky="e", padx=10, pady=10)
+
   botonLimpiar=Button(miFrame2, text="Resetear formulario", command=limpiarcamposEnsayo)
   botonLimpiar.grid(row=1, column=2, sticky="e", padx=10, pady=10)
   botonEdit=Button(miFrame2, text="Cancelar", command=cancela)
@@ -1456,7 +1462,7 @@ def ventanaEditarEnsayos():
 
 
 ####################################################################################################
-#################################################################################################
+
 
 
 def salirAplicacion():
@@ -1469,10 +1475,16 @@ def salirAplicacion():
 def license():
   messagebox.showinfo("Licencia", "Do what the fuck you want to public license.")
 
+def acercade():
+  messagebox.showinfo("Acerca de...", "Programa desarrollado por Oscar Unzueta 2019. Versión 1.0 beta")
+
+
+def ayuda():
+  messagebox.showinfo("Ayuda", "Para el cálculo de los valores fuera de escala se usa la temperatura corregida con el factor corrector > ó < que el limite de cuantificación del sensor (no se aplica incertidumbre)  Para el cálculo de los valores de temperatura incorrectos si se tienen en cuenta la incertidumbre, el factor corrector y la tolerancia")  
+
 ####################################################################################################  
 
-def detenerArduino(): 
-    
+def detenerArduino():    
     #messagebox.showinfo("xxxx","ggggg")
     sTemp=10000
     #hilo2.join()
@@ -1509,7 +1521,7 @@ def leertemp():
   R.pack(side=RIGHT)
   scrollbary = Scrollbar(R, orient=VERTICAL)
   scrollbarx = Scrollbar(R, orient=HORIZONTAL)
-  tree = ttk.Treeview(R, columns=( "hora","temperatura","temp_corregida"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
+  tree = ttk.Treeview(R, columns=( "hora","temperatura","temp_corregida","margen","malas"), selectmode="extended", height=500, yscrollcommand=scrollbary.set, xscrollcommand=scrollbarx.set)
   scrollbary.config(command=tree.yview)
   scrollbary.pack(side=RIGHT, fill=Y)
   scrollbarx.config(command=tree.xview)
@@ -1517,12 +1529,15 @@ def leertemp():
   tree.heading('hora', text="hora", anchor=W)
   tree.heading('temperatura', text="temperatura", anchor=W)
   tree.heading('temp_corregida', text="temp_corregida", anchor=W)
+  tree.heading('margen', text="margen", anchor=W)
+  tree.heading('malas', text="malas", anchor=W)
   tree.column('#0', stretch=NO, minwidth=0, width=10)
-  tree.column('#1', stretch=NO, minwidth=0, width=40)
-  tree.column('#2', stretch=NO, minwidth=0, width=40)
+  tree.column('#1', stretch=NO, minwidth=70, width=90)
+  tree.column('#2', stretch=NO, minwidth=80, width=95)
+  tree.column('#3', stretch=NO, minwidth=70, width=80)
+  tree.column('#4', stretch=NO, minwidth=0, width=50)
   tree.pack()
   tree.delete(*tree.get_children())
-  
 
   def visualiza():
     refrescar()
@@ -1533,6 +1548,7 @@ def leertemp():
     #inicio=time.time()  
     #flag='x'
     tiempo=0
+    malas=""
     #factorx=0
     #now = time.time()
     #ahora=datetime.now()
@@ -1542,7 +1558,8 @@ def leertemp():
     incumplerangosup=0
     incumplerangoinf=0
     lecturas=0
-    maxvalue=30
+    maxvalue=duraciondqo*60
+    
     currentvalue=0
     def progress(currentvalue):
       progressbar["value"]=currentvalue
@@ -1560,7 +1577,6 @@ def leertemp():
     cursorId.close()
     cursorCalibracion.close()  
     #messagebox.showinfo(miId)  
-
     TempMin=float(sTemp)
     TempMin=TempMin+factorx  
     TempMax=float(sTemp)
@@ -1568,7 +1584,7 @@ def leertemp():
 
     progressbar["value"]=currentvalue
     progressbar["maximum"]=maxvalue
-    divisions=2   # basrra progreso
+    divisions=2   # barra progreso
     
     temp_acumulado=0
     while tiempo<(duraciondqo*60) and sTemp!="1000":
@@ -1598,11 +1614,11 @@ def leertemp():
         incumplerangoinf=incumplerangoinf+1  
       if corregida > rangosu:
         incumplerangosup=incumplerangosup+1
-
-      tree.insert('', 'end', values=(hora,float(sTemp),float(corregida) ))
-
-          # labeltemp["text"]=str(sTemp)
-    
+      if corregida > tempokDQO+toleranciaDQO or corregida<tempokDQO-toleranciaDQO:
+        malas="mal"
+      tree.insert('', 'end', values=(hora,float(sTemp),float(corregida),float(corregida-tempokDQO),malas ))
+      malas=""
+          # labeltemp["text"]=str(sTemp)  
       currentvalue=currentvalue+2
       progress(currentvalue)
       
@@ -1616,18 +1632,16 @@ def leertemp():
       cursor1.execute("INSERT INTO temperaturas (Id,hora,temperatura,corregida) VALUES ( ?,?,?,?)",(datos))
       conex.commit()
     media=temp_acumulado/lecturas
-    datos=lecturas,incumplimientosArriba,incumplimientosAbajo,media,TempMax,TempMin,incumplerangoinf+incumplerangosup
-    cursor1.execute("UPDATE ensayos SET num_medidas=?, mal_up=?, mal_down=?, media=?, max=?, min=?, fuerarango=?  WHERE Id="+str(miId[0]),(datos)) ##################
+    factorcorrector=factor150
+    incertidumbre=u150
+    datos=lecturas,incumplimientosArriba,incumplimientosAbajo,media,TempMax,TempMin,incumplerangoinf+incumplerangosup,factorcorrector,incertidumbre
+    cursor1.execute("UPDATE ensayos SET num_medidas=?, mal_up=?, mal_down=?, media=?, max=?, min=?, fuerarango=?, factorcorrector=?, incertidumbre=? WHERE Id="+str(miId[0]),(datos)) ##################
     conex.commit()
     cursor1.close()
     conex.close()  
     fichero.close()
     ventanaLectura.destroy()
-
     messagebox.showinfo("info","Fin del ensayo "+str(miId[0])+" en "+str(int(tiempo)/60)+" minutos. Los valores no conformes han sido "+str(contadorIncumplimientos)+" / Medidas fuera de rango: "+str(incumplerangoinf+incumplerangosup))
-  
-  #Label1=Label(campos, textvariable=relleno)
-  #Label1.grid(row=0, column=0, sticky="e", padx=10, pady=5)
   hilo2 = threading.Thread(target=visualiza)
   hilo2.start()
  
@@ -1636,8 +1650,11 @@ def leertemp():
     
 ###########################################################################################################
 def hiloaArduino():
-  thread1 = threading.Thread(target=arduino, daemon=TRUE)
-  thread1.start()
+  global flag
+  if flag!="reading":
+    flag="reading"
+    thread1 = threading.Thread(target=arduino, daemon=TRUE)
+    thread1.start()
   
 
 def tablas():
@@ -1645,9 +1662,9 @@ def tablas():
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
   micursor.execute('''    CREATE TABLE IF NOT EXISTS config (    diascalibracion integer,    rangosup real,    rangoinf real,    factorCobertura real,    intervalomedida integer,    duracionDQO integer,    duracionCN integer,    tempDQO integer,    tempCN integer,   aceptacionDQO real, aceptacionCN real   );''')  
-  micursor.execute('''    CREATE TABLE IF NOT EXISTS ensayos (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    tipo text,    fecha text ,    sensor text,    cubeta integer,    lims1 integer,    lims2 integer,    lims3 integer,    lims4 integer,    lims5 integer,    lims6 integer,    lims7 integer,    lims8 integer,    lims9 integer,    control text,    analista text,    comentario text, num_medidas integer, mal_up integer, mal_down integer, media real, max, real, min real, fuerarango integer   );''')
+  micursor.execute('''    CREATE TABLE IF NOT EXISTS ensayos (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    tipo text,    fecha text ,    sensor text,    cubeta integer,    lims1 integer,    lims2 integer,    lims3 integer,    lims4 integer,    lims5 integer,    lims6 integer,    lims7 integer,    lims8 integer,    lims9 integer,    control text,    analista text,    comentario text, num_medidas integer, mal_up integer, mal_down integer, media real, max, real, min real, fuerarango integer, factorcorrector real, incertidumbre real   );''')
   micursor.execute('''    CREATE TABLE IF NOT EXISTS historial (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operacion text,    operario text,    estado text,    comentario text    );''')
-  micursor.execute('''    CREATE TABLE IF NOT EXISTS calibracion (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operario text,    factor80 real,    factor150 real, u80 real, u150 real,   comentario text    );''')
+  micursor.execute('''    CREATE TABLE IF NOT EXISTS calibracion (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operario text,    factorMatSusp real,    factor150 real, uMatSusp real, u150 real,   comentario text    );''')
   micursor.execute('''    CREATE TABLE IF NOT EXISTS temperaturas (    Id INTEGER,    hora text,     temperatura real     );''')
   miconexion.commit()
   messagebox.showinfo("Tablas de ensayos creadas con éxito")  
@@ -1714,9 +1731,9 @@ def tablas44():
       fecha text,
       sensor text,
       operario text,
-      factor80 real,
+      factorMatSusp real,
       factor150 real,
-      u80 real,
+      uMatSusp real,
       u150 real,
       comentario text
       );''')
@@ -1752,11 +1769,20 @@ ensayosMenu.add_command(label="Salir", command=salirAplicacion)
 
 SensoresMenu=Menu(barraMenu, tearoff=0)
 SensoresMenu.add_command(label="Estado sensor", command=ventanaEstadoSensor)
+SensoresMenu.add_separator()
+
 SensoresMenu.add_command(label="Ver calibraciones", command=muestraCalibracion)
 SensoresMenu.add_command(label="Calibrar sensor", command=ventanacalibracion)
+SensoresMenu.add_separator()
+
 SensoresMenu.add_command(label="Ver historial sensor", command=muestraHistorial )
+
 SensoresMenu.add_command(label="Añadir incidencia sensor", command=ventanaHistory)
+SensoresMenu.add_separator()
+
 SensoresMenu.add_command(label="Ver ficha equipo sensor", command=certificado)
+SensoresMenu.add_command(label="Ver ficha equipo digestor", command=digestor)
+SensoresMenu.add_command(label="Ver PNT ensayo", command=pnt)
 
 archivoMenu=Menu(barraMenu, tearoff=0)
 archivoMenu.add_command(label="Exportar")
@@ -1769,10 +1795,10 @@ archivoMenu.add_command(label="Cargar copia de seguridad")
 archivoMenu.add_command(label="Regenerar tablas", command=tablas)
 
 ayudaMenu=Menu(barraMenu, tearoff=0)
-ayudaMenu.add_command(label="Ayuda", command=certificado)
+ayudaMenu.add_command(label="Ayuda", command=ayuda)
 ayudaMenu.add_command(label="Documentación técnica")
 ayudaMenu.add_command(label="Licencia", command=license)
-ayudaMenu.add_command(label="Acerca de esto")
+ayudaMenu.add_command(label="Acerca de esto", command=acercade)
 
 barraMenu.add_cascade(label="Ensayos", menu=ensayosMenu)
 barraMenu.add_cascade(label="Sensores", menu=SensoresMenu)
@@ -1815,6 +1841,5 @@ botonConfig.grid(row=4, column=0, sticky="e", padx=10, pady=10)
        # l.grid(row=i+1, column=j+1, sticky=NSEW)
 
 root.mainloop()
-
 
 
