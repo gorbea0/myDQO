@@ -189,28 +189,30 @@ def muestraEnsayos():
   def eliminar():
     valor ="not"
     #elimina datos en BBDD de cada ensayo
-    IdSeleccionada=tree.item(tree.selection())['values'][0]
-    #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaEnsayos,  minvalue=1, maxvalue=9999)
-    ##if answ is not None:
+    IdSeleccionada=0
+    try:
+      IdSeleccionada=tree.item(tree.selection())['values'][0]
+    except:
+      messagebox.showerror("Error","Debes seleccionar primero el registro a eliminar en la tabla de abajo")  
+    if IdSeleccionada !=0:
+      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el registro de temperaturas asociado")
+      if valor=="yes": # and answ is not None:
+        miconexion=sqlite3.connect("D:\\tempcontrol.db")
+        micursor=miconexion.cursor() 
+        miconexion.commit()
       
-    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el registro de temperaturas asociado")
-    if valor=="yes": # and answ is not None:
-      miconexion=sqlite3.connect("D:\\tempcontrol.db")
-      micursor=miconexion.cursor() 
-      miconexion.commit()
-     
-      try:
-        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(IdSeleccionada))
-        micursor.execute("DELETE FROM ensayos WHERE Id="+str(IdSeleccionada))
-        miconexion.commit() 
-        messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito")       
-      except:
-        messagebox.showerror("Atencion","Error") 
-      finally:
-        micursor.close()
-        miconexion.close()
-    else:
-      messagebox.showerror("Atencion","Cancelado")   
+        try:
+          micursor.execute("DELETE FROM temperaturas WHERE Id="+str(IdSeleccionada))
+          micursor.execute("DELETE FROM ensayos WHERE Id="+str(IdSeleccionada))
+          miconexion.commit() 
+          messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito")       
+        except:
+          messagebox.showerror("Atencion","Error") 
+        finally:
+          micursor.close()
+          miconexion.close()
+      else:
+        messagebox.showerror("Atencion","Cancelado")   
 
   botonera=Frame(ventanaEnsayos)
   botonera.pack()
@@ -316,26 +318,32 @@ def muestraCalibracion():
   estadoLabel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
   def eliminarCalibracion():
     #elimina datos en BBDD de cada ensayo
-    IdSeleccionada=tree.item(tree.selection())['values'][0]
+    
     valor="not"
     #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaCali,  minvalue=1, maxvalue=9999)
     #if answ is not None:
-    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
-    if valor=="yes": #and answ is not None:
-      miconexion=sqlite3.connect("D:\\tempcontrol.db")
-      micursor=miconexion.cursor()
-      try:
-        micursor.execute("DELETE FROM calibracion WHERE Id="+str(IdSeleccionada))
-        messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito") 
-        miconexion.commit()
-        ventanaCali.destroy()
-      except:
-        messagebox.showerror("Atencion","Error") 
-      finally:
-        micursor.close()
-        miconexion.close()    
-    else:
-      messagebox.showerror("Atencion","Cancelado")   
+    IdSeleccionada=0
+    try:
+      IdSeleccionada=tree.item(tree.selection())['values'][0]
+    except:
+      messagebox.showerror("Error","Debes seleccionar primero el registro a eliminar en la tabla de abajo")  
+    if IdSeleccionada !=0:
+      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+      if valor=="yes": #and answ is not None:
+        miconexion=sqlite3.connect("D:\\tempcontrol.db")
+        micursor=miconexion.cursor()
+        try:
+          micursor.execute("DELETE FROM calibracion WHERE Id="+str(IdSeleccionada))
+          messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito") 
+          miconexion.commit()
+          ventanaCali.destroy()
+        except:
+          messagebox.showerror("Atencion","Error") 
+        finally:
+          micursor.close()
+          miconexion.close()    
+      else:
+        messagebox.showerror("Atencion","Cancelado")   
 
   botonera=Frame(ventanaCali)
   botonera.pack()
@@ -404,6 +412,9 @@ def muestraTemperaturas(a):
   campos.pack()
 
   #answer = simpledialog.askinteger("Registro temperaturas", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
+  
+  
+
   answer=a
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
@@ -424,31 +435,36 @@ def muestraTemperaturas(a):
   def eliminar():
     #elimina datos en BBDD de cada ensayo
     #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaTemperaturas,  minvalue=1, maxvalue=9999)
-    answ=tree.item(tree.selection())['values'][0])
+    
     #if answ is not None:
-    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el ensayo asociado")
 
-    if valor=="yes": # and answ is not None:
-      miconexion=sqlite3.connect("D:\\tempcontrol.db")
-      micursor=miconexion.cursor()
-      try:
-        micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answer))
-        micursor.execute("DELETE FROM ensayos WHERE Id="+str(answer))
-        messagebox.showinfo("Atencion","Registro eliminado con exito")
-        miconexion.commit()
-      except:
-        messagebox.showerror("Atencion","Error") 
-      finally:
-        micursor.close()
-        miconexion.close()
-       
-    else:
-      messagebox.showerror("Atencion","Cancelado")   
+    answer=0
+    try:
+      answer=tree.item(tree.selection())['values'][0]
+    except:
+      messagebox.showerror("Error","Debes seleccionar primero el registro a eliminar en la tabla de abajo")  
+    if answer !=0:
+      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad? Se borrarán también el ensayo asociado")
+      if valor=="yes": # and answ is not None:
+        miconexion=sqlite3.connect("D:\\tempcontrol.db")
+        micursor=miconexion.cursor()
+        try:
+          micursor.execute("DELETE FROM temperaturas WHERE Id="+str(answer))
+          micursor.execute("DELETE FROM ensayos WHERE Id="+str(answer))
+          messagebox.showinfo("Atencion","Registro eliminado con exito")
+          miconexion.commit()
+        except:
+          messagebox.showerror("Atencion","Error") 
+        finally:
+          micursor.close()
+          miconexion.close()   
+      else:
+        messagebox.showerror("Atencion","Cancelado")   
 
   botonera=Frame(ventanaTemperaturas)
   botonera.pack()
-  botonparar=Button(botonera, text="Eliminar registros", command=eliminar)
-  botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+  #botonparar=Button(botonera, text="Eliminar registros", command=eliminar)
+  #botonparar.grid(row=1, column=0, sticky="e", padx=10, pady=10)
   def cerrar():
     ventanaTemperaturas.destroy()
   botoncerrar=Button(botonera, text="Cerrar", command=cerrar)
@@ -523,25 +539,33 @@ def muestraHistorial():
   def eliminar():
     #elimina datos en BBDD 
     valor="not"
-    IdSeleccionada=tree.item(tree.selection())['values'][0]
+    
     #answ = simpledialog.askinteger("Eliminación de registros...", "Introduce el numero de Id",  parent=ventanaHistorial,  minvalue=1, maxvalue=9999)
     #if answ is not None:
-    valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
-    if valor=="yes": # and answ is not None:
-      miconexion=sqlite3.connect("D:\\tempcontrol.db")
-      micursor=miconexion.cursor()
-      try:
-        micursor.execute("DELETE FROM historial WHERE Id="+str(IdSeleccionada))
-        messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito") 
-        miconexion.commit()
-        ventanaHistorial.destroy()
-      except:
-        messagebox.showerror("Atencion","Error") 
-      finally:
-        micursor.close()
-        miconexion.close()  
-    else:
-      messagebox.showerror("Atencion","Cancelado")   
+
+
+    IdSeleccionada=0
+    try:
+      IdSeleccionada=tree.item(tree.selection())['values'][0]
+    except:
+      messagebox.showerror("Error","Debes seleccionar primero el registro a eliminar en la tabla de abajo")  
+    if IdSeleccionada !=0:
+      valor=messagebox.askquestion("Aviso", "Deseas borrar de verdad?")
+      if valor=="yes": # and answ is not None:
+        miconexion=sqlite3.connect("D:\\tempcontrol.db")
+        micursor=miconexion.cursor()
+        try:
+          micursor.execute("DELETE FROM historial WHERE Id="+str(IdSeleccionada))
+          messagebox.showinfo("Atencion","Registro "+str(IdSeleccionada)+" eliminado con exito") 
+          miconexion.commit()
+          ventanaHistorial.destroy()
+        except:
+          messagebox.showerror("Atencion","Error") 
+        finally:
+          micursor.close()
+          miconexion.close()  
+      else:
+        messagebox.showerror("Atencion","Cancelado")   
 
   botonera=Frame(ventanaHistorial)
   botonera.pack()
@@ -1089,11 +1113,32 @@ def ventanaEnsayos():
 
   def insertarEnsayo():
     #inserta datos en BBDD de cada ensayo
+    num_ensayos=0
+    if lims1.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims2.get() is not None:
+      num_ensayos=num_ensayos+1 
+    if lims3.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims4.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims5.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims6.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims7.get() is not None:
+      num_ensayos=num_ensayos+1 
+    if lims8.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims9.get() is not None:
+      num_ensayos=num_ensayos+1
+    #num_ensayos almacena cuantas muestras se han hecvho en cada ensayo, cuantos numeros de lims se han aportado
+
     miconexion=sqlite3.connect("D:\\tempcontrol.db")
     micursor=miconexion.cursor()
-    datos=tipoEnsayo.get(),cal.get_date(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END) 
+    datos=tipoEnsayo.get(),cal.get_date(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END),num_ensayos
     try:
-      micursor.execute("INSERT INTO ensayos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)",(datos))
+      micursor.execute("INSERT INTO ensayos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,?)",(datos))
       miconexion.commit()
       messagebox.showinfo("Atencion","Registro creado con éxito ")
     except:
@@ -1102,7 +1147,7 @@ def ventanaEnsayos():
       micursor.close()
       miconexion.close()
     ventanaEnsayos.destroy()  
-    leertemp()  
+    leertemp(tipoEnsayo.get())  
 
   #botones en el grid de abajo
   def cancela():
@@ -1133,7 +1178,6 @@ def ventanaDatosEnsayo(a):
   ventanaDatosEnsayo.title("Datos del Ensayos")
   campos=Frame(ventanaDatosEnsayo)
   campos.pack() 
-
   IdSeleccionada=a
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
@@ -1248,9 +1292,9 @@ def ventanaDatosEnsayo(a):
 ####################################################################################################
 
 
-def ventanaEditarEnsayos(a):
+def ventanaEditarEnsayos(k):
   #campos de los ensayos
-  
+ 
   def limpiarcamposEnsayo():
     #fechas.set("")
     sensor.set("")
@@ -1271,7 +1315,7 @@ def ventanaEditarEnsayos(a):
 
   def cancela():
       ventanaEdEnsayos.destroy()
-
+  
   ventanaEdEnsayos=Toplevel(root)
   ventanaEdEnsayos.config(cursor="hand2")
   ventanaEdEnsayos.geometry("630x900")
@@ -1279,7 +1323,7 @@ def ventanaEditarEnsayos(a):
   ventanaEdEnsayos.title("Edición de ensayos")
   campos=Frame(ventanaEdEnsayos)
   campos.pack()
-  #fechas=StringVar(value=time.strftime("%d/%m/%Y"))
+  fechas=StringVar(value=time.strftime("%Y-%m-%d"))
   sensor=StringVar(value="SENS1")
   cubeta=IntVar()
   tipoEnsayo=StringVar(value="DQO")
@@ -1294,12 +1338,12 @@ def ventanaEditarEnsayos(a):
   lims9=IntVar()
   analista=StringVar()
   control=StringVar()
-  #ident=StringVar()
+  #num_ensayos=IntVar()
+  
   rb1=Radiobutton(campos, text="DQO",  value="DQO", variable=tipoEnsayo)
   rb1.grid(column=1, row=0)
   rb2=Radiobutton(campos, text="Mat. susp.", value="Mat", variable=tipoEnsayo)
   rb2.grid(column=2,row=0)
-
   #cuadroFecha=Entry(campos, textvariable=fechas)
   #cuadroFecha.grid(row=1, column=1, padx=10, pady=10)
   spin=Spinbox(campos, from_=0, to=9, width=1, textvariable=cubeta)
@@ -1367,7 +1411,7 @@ def ventanaEditarEnsayos(a):
   comentLabel=Label(campos, text="Observaciones:")
   comentLabel.grid(row=15, column=0, sticky="e", padx=10, pady=10)
   #lee datos en BBDD de cada ensayo
-  answer=a
+  answer=k
 
   miconexion=sqlite3.connect("D:\\tempcontrol.db")
   micursor=miconexion.cursor()
@@ -1394,13 +1438,12 @@ def ventanaEditarEnsayos(a):
       control.set(dato[14])
       analista.set(dato[15])
       textoComentario.insert(1.0,dato[16])
+      
   except:
     messagebox.showerror("Atencion","Error BBDD") 
   finally:
     micursor.close()
     miconexion.close()
-
-
   ano=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%Y")
   mes=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%m")
   dia=datetime.datetime.strftime(datetime.datetime.strptime(fechas,"%Y-%m-%d"),"%d")
@@ -1411,11 +1454,38 @@ def ventanaEditarEnsayos(a):
 
   def actualizarDatos():
     #inserta datos en BBDD de cada ensayo
+
+    num_ensayos=0
+    if lims1.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims2.get() is not None:
+      num_ensayos=num_ensayos+1 
+    if lims3.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims4.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims5.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims6.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims7.get() is not None:
+      num_ensayos=num_ensayos+1 
+    if lims8.get() is not None:
+      num_ensayos=num_ensayos+1
+    if lims9.get() is not None:
+      num_ensayos=num_ensayos+1
+    #num_ensayos almacena cuantas muestras se han hecvho en cada ensayo, cuantos numeros de lims se han aportado
+
+
+
     miconexion=sqlite3.connect("D:\\tempcontrol.db")
     micursor=miconexion.cursor()
-    datos=tipoEnsayo.get(),cal.get_date(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END) 
+    datos=tipoEnsayo.get(),cal.get_date(),sensor.get(),cubeta.get(),lims1.get(),lims2.get(),lims3.get(),lims4.get(),lims5.get(),lims6.get(),lims7.get(),lims8.get(),lims9.get(),control.get(),analista.get(),textoComentario.get("1.0",END),num_ensayos 
+    
+
+    
     try:
-      micursor.execute("UPDATE ensayos SET tipo=?, fecha=?, sensor=?, cubeta=?, lims1=?, lims2=?, lims3=?, lims4=?, lims5=?, lims6=?, lims7=?, lims8=?, lims9=?, control=?, analista=?, comentario=? "+ " WHERE Id="+str(answer),(datos))
+      micursor.execute("UPDATE ensayos SET tipo=?, fecha=?, sensor=?, cubeta=?, lims1=?, lims2=?, lims3=?, lims4=?, lims5=?, lims6=?, lims7=?, lims8=?, lims9=?, control=?, analista=?, comentario=?, num_ensayos=? "+ " WHERE Id="+str(answer),(datos))
       miconexion.commit()
       messagebox.showinfo("Atencion","Registro creado con éxito ")
     except:
@@ -1466,13 +1536,28 @@ def detenerArduino():
     #hilo2.join()
     #ventanaLectura.destroy
 
-def leertemp():
+def leertemp(a):
   refrescar()
+  if a=="DQO":
+    factor=factor150
+    tiempoEnsayo=duraciondqo
+    incertidumbre=u150
+    temperaturaCorrecta=tempokDQO
+    tolerancia=toleranciaDQO
+  if a=="Mat":
+    factor=factor150
+    tiempoEnsayo=duracionCN
+    incertidumbre=uMatSusp
+    temperaturaCorrecta=tempcn
+    tolerancia=toleranciaCN
   ventanaLectura=Toplevel(root)
   ventanaLectura.config(cursor="pirate")
-  ventanaLectura.geometry("700x500")
+  ventanaLectura.geometry("800x500")
   ventanaLectura.iconbitmap('C:\\Users\\Gorbe\\OneDrive\\Documentos\\mitermo.ico')
-  ventanaLectura.title("Leyendo datos del sensor...")
+  if a=="DQO":
+    ventanaLectura.title("Leyendo datos del sensor DQO. ( factor corr= "+str(factor)+" / Incert.= "+str(incertidumbre)+") durante "+str(tiempoEnsayo)+"min ...")
+  if a=="Mat":
+    ventanaLectura.title("Leyendo datos del sensor Mat. susp ( factor corr= "+str(factor)+" / Incert.= "+str(incertidumbre)+") durante "+str(tiempoEnsayo)+"min ...")
 
 
   botonera=Frame(ventanaLectura)
@@ -1528,36 +1613,36 @@ def leertemp():
     incumplerangosup=0
     incumplerangoinf=0
     lecturas=0
-    maxvalue=duraciondqo*60
+    maxvalue=tiempoEnsayo*60
     
     currentvalue=0
     def progress(currentvalue):
       progressbar["value"]=currentvalue
     
-    cursorCalibracion=conex.cursor()
-    cursorCalibracion.execute("SELECT * FROM calibracion where fecha=(SELECT MAX(fecha) from calibracion)") 
+    #cursorCalibracion=conex.cursor()
+    #cursorCalibracion.execute("SELECT * FROM calibracion where fecha=(SELECT MAX(fecha) from calibracion)") 
     cursorId=conex.cursor()
     cursorId.execute("SELECT MAX(Id) from ensayos ")
     conex.commit()
-    CalibracionActual=cursorCalibracion.fetchall()
-    for factor in CalibracionActual:
-      factorx=factor[5]
+    #CalibracionActual=cursorCalibracion.fetchall()
+    #for factor in CalibracionActual:
+      #factorx=factor[5]
    
     miId=cursorId.fetchone()
     cursorId.close()
-    cursorCalibracion.close()  
+    #cursorCalibracion.close()  
     
     TempMin=float(sTemp)
-    TempMin=TempMin+factorx  
+    TempMin=TempMin+factor  
     TempMax=float(sTemp)
-    TempMax=TempMax+factorx
+    TempMax=TempMax+factor
 
     progressbar["value"]=currentvalue
     progressbar["maximum"]=maxvalue
     divisions=2   # barra progreso
     
     temp_acumulado=0
-    while tiempo<(duraciondqo*60) and sTemp!="1000":
+    while tiempo<(tiempoEnsayo*60) and sTemp!="1000":
       time.sleep(2) 
       tiempo=tiempo+2
       if float(sTemp)>999:
@@ -1565,35 +1650,35 @@ def leertemp():
         conex.close()
         break
       lecturas=lecturas+1
-      corregida=float(sTemp)+factorx
+      corregida=float(sTemp)+factor
       temp_acumulado=temp_acumulado+corregida
-      temperaturaTopeDownDQO=(tempokDQO+factorx)-toleranciaDQO-u150
-      temperaturaTopeUpDQO=(tempokDQO+factorx)+toleranciaDQO+u150
+      temperaturaTopeDown=(temperaturaCorrecta+factor)-tolerancia-incertidumbre
+      temperaturaTopeUp=(temperaturaCorrecta+factor)+tolerancia+incertidumbre
 
       if corregida<TempMin:
         TempMin=corregida
       if corregida>TempMax:
         TempMax=corregida
-      if corregida < temperaturaTopeDownDQO:
+      if corregida < temperaturaTopeDown:
         contadorIncumplimientos=contadorIncumplimientos+1
         incumplimientosAbajo=incumplimientosAbajo+1
-      if corregida > temperaturaTopeUpDQO:       
+      if corregida > temperaturaTopeUp:       
         contadorIncumplimientos=contadorIncumplimientos+1
         incumplimientosArriba=incumplimientosArriba+1
       if corregida < rangoin:
         incumplerangoinf=incumplerangoinf+1  
       if corregida > rangosu:
         incumplerangosup=incumplerangosup+1
-      if corregida > tempokDQO+toleranciaDQO or corregida<tempokDQO-toleranciaDQO:
+      if corregida > temperaturaCorrecta+tolerancia or corregida<temperaturaCorrecta-tolerancia:
         malas="mal"
-      tree.insert('', 'end', values=(hora,float(sTemp),float(corregida),float(corregida-tempokDQO),malas ))
+      tree.insert('', 'end', values=(hora,float(sTemp),float(corregida),float(corregida-temperaturaCorrecta),malas ))
       malas=""
       
       currentvalue=currentvalue+2
       progress(currentvalue)
       
       botonmedida["text"]="Crono: "+str(tiempo)+" / Temperatura actual: "+str(sTemp)+"ºC / Corregida : "+str(corregida)+"ºC / Temp min: "+str(TempMin)+"ºC  /  Temp max: "+str(TempMax)+"ºC /  No conformidades= "+str(contadorIncumplimientos)
-      botonDatos["text"]="Factor corrector: "+str(factorx)+" / Temperatura max admisible = "+str(temperaturaTopeUpDQO)+" /  Temp minima admisible = "+str(temperaturaTopeDownDQO)
+      botonDatos["text"]="Factor corrector: "+str(factor)+" / Temperatura max admisible = "+str(temperaturaTopeUp)+" /  Temp minima admisible = "+str(temperaturaTopeDown)
       progressbar.update()
       ventanaLectura.update()
       
@@ -1602,9 +1687,9 @@ def leertemp():
       cursor1.execute("INSERT INTO temperaturas (Id,hora,temperatura,corregida) VALUES ( ?,?,?,?)",(datos))
       conex.commit()
     media=temp_acumulado/lecturas
-    factorcorrector=factor150
-    incertidumbre=u150
-    datos=lecturas,incumplimientosArriba,incumplimientosAbajo,media,TempMax,TempMin,incumplerangoinf+incumplerangosup,factorcorrector,incertidumbre
+    #factorcorrector=factor150
+    #incertidumbre=u150
+    datos=lecturas,incumplimientosArriba,incumplimientosAbajo,media,TempMax,TempMin,incumplerangoinf+incumplerangosup,factor,incertidumbre
     cursor1.execute("UPDATE ensayos SET num_medidas=?, mal_up=?, mal_down=?, media=?, max=?, min=?, fuerarango=?, factorcorrector=?, incertidumbre=? WHERE Id="+str(miId[0]),(datos)) ##################
     conex.commit()
     cursor1.close()
@@ -1633,7 +1718,7 @@ def tablas():
   micursor=miconexion.cursor()
   try:
     micursor.execute('''    CREATE TABLE IF NOT EXISTS config (    diascalibracion integer,    rangosup real,    rangoinf real,    factorCobertura real,    intervalomedida integer,    duracionDQO integer,    duracionCN integer,    tempDQO integer,    tempCN integer,   aceptacionDQO real, aceptacionCN real   );''')  
-    micursor.execute('''    CREATE TABLE IF NOT EXISTS ensayos (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    tipo text,    fecha text ,    sensor text,    cubeta integer,    lims1 integer,    lims2 integer,    lims3 integer,    lims4 integer,    lims5 integer,    lims6 integer,    lims7 integer,    lims8 integer,    lims9 integer,    control text,    analista text,    comentario text, num_medidas integer, mal_up integer, mal_down integer, media real, max, real, min real, fuerarango integer, factorcorrector real, incertidumbre real   );''')
+    micursor.execute('''    CREATE TABLE IF NOT EXISTS ensayos (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    tipo text,    fecha text ,    sensor text,    cubeta integer,    lims1 integer,    lims2 integer,    lims3 integer,    lims4 integer,    lims5 integer,    lims6 integer,    lims7 integer,    lims8 integer,    lims9 integer,    control text,    analista text,    comentario text, num_medidas integer, mal_up integer, mal_down integer, media real, max, real, min real, fuerarango integer, factorcorrector real, incertidumbre real, num_ensayos integer  );''')
     micursor.execute('''    CREATE TABLE IF NOT EXISTS historial (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operacion text,    operario text,    estado text,    comentario text    );''')
     micursor.execute('''    CREATE TABLE IF NOT EXISTS calibracion (    Id INTEGER PRIMARY KEY AUTOINCREMENT,    fecha text,    sensor text,    operario text,    factorMatSusp real,    factor150 real, uMatSusp real, u150 real,   comentario text    );''')
     micursor.execute('''    CREATE TABLE IF NOT EXISTS temperaturas (    Id INTEGER,    hora text,     temperatura real     );''')
@@ -1647,6 +1732,29 @@ def tablas():
 
 ###############################################################################################################
 
+def informeGlobal():
+
+  miconexion=sqlite3.connect("D:\\tempcontrol.db")
+  cursorMalas=miconexion.cursor()
+  cursorNumEnsayos=miconexion.cursor()
+  
+  try:
+    cursorMalas.execute("SELECT COUNT(*) FROM ensayos WHERE (mal_up+mal_down)>0")
+    cursorNumEnsayos.execute("SELECT SUM(num_ensayos) FROM ensayos")
+    miconexion.commit()
+    datos= cursorMalas.fetchone()
+    #for row in datos:  
+      #malos=row[0]
+    malos=datos[0]  
+    datos=cursorNumEnsayos.fetchone()
+    numerodeensayos=datos[0]  
+  except:
+    messagebox.showerror("Error","Error")    
+  finally:
+    cursorMalas.close()
+    cursorNumEnsayos.close()
+    miconexion.close()  
+  messagebox.showinfo("Informe global","En la Base de datos hay "+str(malos)+" registros con valores no conformes. El número de muestras registradas son "+str(numerodeensayos))
 
 ######################################################################################################
 # interfaz grafica general de la aplicacion
@@ -1656,9 +1764,9 @@ root.config(menu=barraMenu, width=800, heigh=500)
 ensayosMenu=Menu(barraMenu, tearoff=0)
 ensayosMenu.add_command(label="Iniciar Ensayo", command=ventanaEnsayos)
 ensayosMenu.add_command(label="Ver ensayosMenu", command=muestraEnsayos)
-ensayosMenu.add_command(label="Informe global", command=salirAplicacion)
+ensayosMenu.add_command(label="Informe global", command=informeGlobal)
 ensayosMenu.add_command(label="Conectar con sensor" , command=hiloaArduino)
-ensayosMenu.add_command(label="Ver temperaturas" , command=muestraTemperaturas)
+ensayosMenu.add_command(label="Ver temperaturas" , command=muestraEnsayos)
 ensayosMenu.add_separator()
 ensayosMenu.add_command(label="Personalizar", command=ventanaConfig)
 ensayosMenu.add_command(label="Salir", command=salirAplicacion)
@@ -1690,6 +1798,15 @@ archivoMenu.add_command(label="Configurar copias de seguridad")
 archivoMenu.add_command(label="Cargar copia de seguridad")
 archivoMenu.add_command(label="Regenerar tablas", command=tablas)
 
+VistasMenu=Menu(barraMenu, tearoff=0)
+VistasMenu.add_command(label="Ver ensayos", command=muestraEnsayos)
+VistasMenu.add_command(label="Ver ensayos por num LIMS", command=ventanaEnsayos)
+VistasMenu.add_command(label="Ver ensayos por fecha", command=ventanaEnsayos)
+VistasMenu.add_command(label="Ver controles", command=ventanaEnsayos)
+VistasMenu.add_command(label="Ver ensayos incorrectos", command=ventanaEnsayos)
+
+
+
 ayudaMenu=Menu(barraMenu, tearoff=0)
 ayudaMenu.add_command(label="Ayuda", command=ayuda)
 ayudaMenu.add_command(label="Documentación técnica")
@@ -1698,6 +1815,7 @@ ayudaMenu.add_command(label="Acerca de esto", command=acercade)
 
 barraMenu.add_cascade(label="Ensayos", menu=ensayosMenu)
 barraMenu.add_cascade(label="Sensores", menu=SensoresMenu)
+barraMenu.add_cascade(label="Vistas", menu=VistasMenu)
 barraMenu.add_cascade(label="Archivo", menu=archivoMenu)
 barraMenu.add_cascade(label="Ayuda", menu=ayudaMenu)
 
@@ -1716,7 +1834,7 @@ botonVerEstado=Button(botonera, text="Ver estado del equipo", command=ventanaEst
 botonVerEstado.grid(row=2, column=0, sticky="e", padx=10, pady=10)
 botonIniciar=Button(botonera, text="Iniciar un nuevo ensayo", command=ventanaEnsayos)
 botonIniciar.grid(row=2, column=1, sticky="e", padx=10, pady=10)
-botonVerTemperaturas=Button(botonera, text="Ver temperaturas", command=muestraTemperaturas)
+botonVerTemperaturas=Button(botonera, text="Ver temperaturas", command=muestraEnsayos)
 botonVerTemperaturas.grid(row=3, column=0, sticky="e", padx=10, pady=10)
 botonVerCalibraciones=Button(botonera, text="Ver calibraciones", command=muestraCalibracion)
 botonVerCalibraciones.grid(row=3, column=1, sticky="e", padx=10, pady=10)
